@@ -1,0 +1,343 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@font-face {
+    font-family: 'Netflix';
+    src: url('../fonts/NetflixSans-Light.otf');
+    font-weight: 200;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'Netflix';
+    src: url('../fonts/NetflixSans-Regular.otf');
+    font-weight: normal;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'Netflix';
+    src: url('../fonts/NetflixSans-Medium.otf');
+    font-weight: 600;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'Netflix';
+    src: url('../fonts/NetflixSans-Bold.otf');
+    font-weight: bold;
+    font-style: normal;
+}
+
+body {
+    font-family: 'Netflix', sans-serif;
+}
+
+@layer utilities {
+    .text-balance {
+        text-wrap: balance;
+    }
+
+    /* Hide scrollbar for Chrome, Safari and Opera */
+    .no-scrollbar::-webkit-scrollbar {
+        display: none;
+    }
+    /* Hide scrollbar for IE, Edge and Firefox */
+    .no-scrollbar {
+        -ms-overflow-style: none;  /* IE and Edge */
+        scrollbar-width: none;  /* Firefox */
+    }
+}
+
+@layer base {
+    :root {
+        --plex-accent: 42 97% 46%;
+        --background: 240 10% 3.9%;
+        --alternative: 21, 21, 23;
+        --foreground: 0 0% 98%;
+        --card: 240 10% 3.9%;
+        --card-foreground: 0 0% 98%;
+        --popover: 240 10% 3.9%;
+        --popover-foreground: 0 0% 98%;
+        --primary: 0 0% 98%;
+        --primary-foreground: 240 5.9% 10%;
+        --secondary: 240 3.7% 15.9%;
+        --secondary-foreground: 0 0% 98%;
+        --muted: 240 3.7% 15.9%;
+        --muted-foreground: 240 5% 64.9%;
+        --accent: 240 3.7% 15.9%;
+        --accent-foreground: 0 0% 98%;
+        --destructive: 0 62.8% 30.6%;
+        --destructive-foreground: 0 0% 98%;
+        --border: 240 3.7% 15.9%;
+        --input: 240 3.7% 15.9%;
+        --ring: 240 4.9% 83.9%;
+        --chart-1: 220 70% 50%;
+        --chart-2: 160 60% 45%;
+        --chart-3: 30 80% 55%;
+        --chart-4: 280 65% 60%;
+        --chart-5: 340 75% 55%;
+        --radius: 0.5rem;
+    }
+
+    .dark {
+        --plex-accent: 42 97% 46%;
+        --background: 240 10% 3.9%;
+        --alternative: 21, 21, 23;
+        --foreground: 0 0% 98%;
+        --card: 240 10% 3.9%;
+        --card-foreground: 0 0% 98%;
+        --popover: 240 10% 3.9%;
+        --popover-foreground: 0 0% 98%;
+        --primary: 0 0% 98%;
+        --primary-foreground: 240 5.9% 10%;
+        --secondary: 240 3.7% 15.9%;
+        --secondary-foreground: 0 0% 98%;
+        --muted: 240 3.7% 15.9%;
+        --muted-foreground: 240 5% 64.9%;
+        --accent: 240 3.7% 15.9%;
+        --accent-foreground: 0 0% 98%;
+        --destructive: 0 62.8% 30.6%;
+        --destructive-foreground: 0 0% 98%;
+        --border: 240 3.7% 15.9%;
+        --input: 240 3.7% 15.9%;
+        --ring: 240 4.9% 83.9%;
+        --chart-1: 220 70% 50%;
+        --chart-2: 160 60% 45%;
+        --chart-3: 30 80% 55%;
+        --chart-4: 280 65% 60%;
+        --chart-5: 340 75% 55%;
+    }
+}
+
+@layer base {
+    * {
+        @apply border-border;
+    }
+
+    body {
+        @apply bg-background text-foreground;
+    }
+
+    .without-ring {
+        @apply focus:ring-0 focus:ring-offset-0 focus-within:ring-0 focus-within:ring-offset-0 focus-visible:ring-0 focus-visible:ring-offset-0 ring-0 ring-offset-0 focus:outline-0 focus-within:outline-0 focus-visible:outline-0 outline-0 focus:border-0 focus-within:border-0 focus-visible:border-0 border-0;
+    }
+}
+
+.hover-time {
+    background-color: hsl(var(--background));
+}
+
+.ui-video-seek-slider .hover-time .preview-screen {
+    width: 240px !important;
+    height: 135px !important;
+    background-color: transparent !important;
+}
+
+/* YouTube-style minimalist timeline */
+.ui-video-seek-slider {
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+.ui-video-seek-slider .track {
+    height: 4px !important;
+    background: rgba(255, 255, 255, 0.25) !important;
+    border-radius: 2px !important;
+    position: relative !important;
+}
+
+.ui-video-seek-slider:hover .track {
+    height: 6px !important;
+}
+
+.ui-video-seek-slider .track .main {
+    height: 100% !important;
+    position: relative !important;
+}
+
+.ui-video-seek-slider .track .main .inner-seek-block {
+    position: absolute !important;
+    height: 100% !important;
+    top: 0 !important;
+    left: 0 !important;
+}
+
+.ui-video-seek-slider .track .main .buffered {
+    background-color: rgba(255, 255, 255, 0.4) !important;
+    border-radius: 2px !important;
+}
+
+.ui-video-seek-slider .track .main .seek-hover {
+    background-color: transparent !important;
+    display: none !important;
+}
+
+.ui-video-seek-slider .track .main .connect {
+    background-color: hsl(var(--plex-accent)) !important;
+    border-radius: 2px !important;
+    z-index: 2 !important;
+}
+
+.ui-video-seek-slider .thumb {
+    opacity: 0 !important;
+    transition: opacity 0.2s ease !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+}
+
+.ui-video-seek-slider:hover .thumb {
+    opacity: 1 !important;
+}
+
+.ui-video-seek-slider .thumb .handler {
+    width: 14px !important;
+    height: 14px !important;
+    background-color: hsl(var(--plex-accent)) !important;
+    border-radius: 50% !important;
+    border: none !important;
+    box-shadow: 0 0 8px rgba(0, 0, 0, 0.4) !important;
+    transition: transform 0.15s ease !important;
+}
+
+.ui-video-seek-slider .thumb .handler:hover {
+    transform: scale(1.2) !important;
+}
+
+.ui-video-seek-slider > .hover-time.active[data-testid="hover-time"] {
+    background-color: transparent !important;
+    padding: 0 !important;
+}
+
+.ui-video-seek-slider > .hover-time.active[data-testid="hover-time"] .preview-screen {
+    background-color: transparent !important;
+    padding: 0 !important;
+}
+
+.logo-shift {
+    transition: transform 0.8s ease;
+    transform: translateY(var(--h));
+}
+
+.fade-down {
+    animation: fadeDown 0.8s ease forwards;
+}
+
+@keyframes fadeDown {
+    0% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+    100% {
+        opacity: 0;
+        transform: translateY(100%);
+    }
+}
+
+/* Glassmorphic utilities */
+.glass {
+    background: rgba(255, 255, 255, 0.06);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.glass-strong {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.glass-dark {
+    background: rgba(0, 0, 0, 0.35);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.glass-pill {
+    background: rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.glass-card-hover {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glass-card-hover:hover {
+    background: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.2);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    transform: translateY(-2px);
+}
+
+.glass-glow {
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.glass-glow-accent {
+    box-shadow: 0 4px 30px rgba(217, 164, 6, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+@keyframes glassShimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+}
+
+.glass-shimmer {
+    background: linear-gradient(
+        90deg,
+        rgba(255, 255, 255, 0) 0%,
+        rgba(255, 255, 255, 0.04) 50%,
+        rgba(255, 255, 255, 0) 100%
+    );
+    background-size: 200% 100%;
+    animation: glassShimmer 4s ease-in-out infinite;
+}
+
+@keyframes floatUp {
+    0% { opacity: 0; transform: translateY(20px); }
+    100% { opacity: 1; transform: translateY(0); }
+}
+
+.animate-float-up {
+    animation: floatUp 0.6s ease-out forwards;
+}
+
+.animate-float-up-delay-1 {
+    animation: floatUp 0.6s ease-out 0.1s forwards;
+    opacity: 0;
+}
+
+.animate-float-up-delay-2 {
+    animation: floatUp 0.6s ease-out 0.2s forwards;
+    opacity: 0;
+}
+
+.animate-float-up-delay-3 {
+    animation: floatUp 0.6s ease-out 0.3s forwards;
+    opacity: 0;
+}
+
+/* Custom scrollbar for settings menu */
+.overflow-y-auto::-webkit-scrollbar {
+    width: 6px;
+}
+
+.overflow-y-auto::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 10px;
+}
+
+.overflow-y-auto::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 10px;
+}
+
+.overflow-y-auto::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
