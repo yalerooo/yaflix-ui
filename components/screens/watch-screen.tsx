@@ -796,7 +796,6 @@ export const WatchScreen: FC<{ watch: string | undefined }> = ({ watch }) => {
             >
             {metadata && (
               <VideoSeekSlider
-                className=""
                 max={(player.current?.getDuration() ?? 0) * 1000}
                 currentTime={progress * 1000}
                 bufferTime={buffered * 1000}
