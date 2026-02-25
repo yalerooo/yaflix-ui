@@ -26,7 +26,7 @@ You can also run Yaflix using Docker:
 
 1. Clone the project repository:
     ```bash
-    git clone https://github.com/ricoloic/yaflix.git
+    git clone https://github.com/yalerooo/yaflix-ui
     ```
 2. Build and start the Docker container:
     ```bash
