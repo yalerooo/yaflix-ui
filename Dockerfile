@@ -1,29 +1,30 @@
 ARG NODE_VERSION=20
 
 FROM node:${NODE_VERSION}-alpine AS base
+WORKDIR /app
+RUN corepack enable && corepack prepare pnpm@latest --activate
 
-RUN npm install -g pnpm
-
-WORKDIR /usr/src/app
-
-FROM base AS build
-
+FROM base AS deps
 COPY package.json pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile
 
+FROM base AS build
+COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-RUN pnpm run build
+ENV NODE_ENV=production
+RUN pnpm build
 
 FROM base AS final
-
-WORKDIR /usr/src/app
+WORKDIR /app
 
 ENV NODE_ENV=production
+ENV PORT=3000
 
-COPY package.json .
-
-COPY --from=build /usr/src/app/node_modules ./node_modules
-COPY --from=build /usr/src/app/. ./.
+COPY package.json pnpm-lock.yaml ./
+COPY --from=deps /app/node_modules ./node_modules
+COPY --from=build /app/.next ./.next
+COPY --from=build /app/public ./public
+COPY --from=build /app/next.config.mjs ./next.config.mjs
 
 EXPOSE 3000
 

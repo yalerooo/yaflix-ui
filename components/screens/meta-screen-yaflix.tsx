@@ -5,6 +5,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { ServerApi } from "@/api";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -35,6 +36,16 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { CarouselContext } from "@/components/carousel";
 import { cn } from "@/lib/utils";
 import { getSeriesLogo } from "@/lib/fanart";
+import { useSession } from "@/hooks/use-session";
+import { useQueryClient } from "@tanstack/react-query";
+import {
+  extractTmdbId,
+  extractTmdbIdFromGuids,
+  extractTvdbId,
+  extractTvdbIdFromGuids,
+  fetchMovieArtwork,
+  fetchTvShowArtwork,
+} from "@/lib/fanart";
 
 function plexImage(path: string | undefined, width?: number, height?: number): string {
   if (!path) return '';
@@ -60,6 +71,8 @@ export const MetaScreenYaflix: FC = () => {
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const queryClient = useQueryClient();
+  const { user } = useSession();
   const mid = searchParams.get("mid");
   const { close } = useContext(CarouselContext);
   const [activeTab, setActiveTab] = useState("general");
@@ -70,10 +83,60 @@ export const MetaScreenYaflix: FC = () => {
   const [nextEpisodeInfo, setNextEpisodeInfo] = useState<{ season: number | null; episode: number | null } | null>(null);
   const [selectedAudioStream, setSelectedAudioStream] = useState<string | null>(null);
   const [selectedSubtitleStream, setSelectedSubtitleStream] = useState<string | null>(null);
+  const [isMetadataEditorOpen, setMetadataEditorOpen] = useState(false);
+  const [metadataSaveError, setMetadataSaveError] = useState<string | null>(null);
+  const [savingMetadata, setSavingMetadata] = useState(false);
+  const [isImageEditorOpen, setImageEditorOpen] = useState(false);
+  const [imageSaveError, setImageSaveError] = useState<string | null>(null);
+  const [savingImages, setSavingImages] = useState(false);
+  const autoEditOpenedForMidRef = useRef<string | null>(null);
+  const [loadingImageSuggestions, setLoadingImageSuggestions] = useState(false);
+  const [imageSuggestions, setImageSuggestions] = useState<{
+    poster: string[];
+    art: string[];
+    thumb: string[];
+  }>({
+    poster: [],
+    art: [],
+    thumb: [],
+  });
+  const [metadataForm, setMetadataForm] = useState({
+    title: "",
+    titleSort: "",
+    originalTitle: "",
+    summary: "",
+    tagline: "",
+    studio: "",
+    originallyAvailableAt: "",
+    contentRating: "",
+    year: "",
+    index: "",
+    parentIndex: "",
+    posterUrl: "",
+    artUrl: "",
+    thumbUrl: "",
+  });
   const { muted, toggleMuted } = usePreviewMuted();
   const { metadata, loading: loadingMetadata } = useItemMetadata(mid);
   const { related, loading: loadingRelated } = useRelated(metadata);
   const info = useHubItem(metadata, { fullSize: true });
+  const isAdmin = useMemo(() => {
+    if (!user) return false;
+    const sessionUser = user as Plex.UserData & {
+      homeAdmin?: boolean;
+      restricted?: boolean;
+    };
+    if (typeof sessionUser.homeAdmin === "boolean") return sessionUser.homeAdmin;
+    if (typeof sessionUser.restricted === "boolean") return !sessionUser.restricted;
+    return !!sessionUser.email;
+  }, [user]);
+  const canEditCurrentMetadata =
+    isAdmin &&
+    !!metadata &&
+    (metadata.type === "movie" ||
+      metadata.type === "show" ||
+      metadata.type === "season" ||
+      metadata.type === "episode");
   
   const season = useMemo(() => {
     if (!metadata) return null;
@@ -292,6 +355,127 @@ export const MetaScreenYaflix: FC = () => {
   }, [metadata?.ratingKey, info.isShow, info.isSeason, info.isEpisode]);
 
   useEffect(() => {
+    if (!metadata) return;
+    setMetadataForm({
+      title: metadata.title ?? "",
+      titleSort: metadata.titleSort ?? "",
+      originalTitle: metadata.originalTitle ?? "",
+      summary: metadata.summary ?? "",
+      tagline: metadata.tagline ?? "",
+      studio: metadata.studio ?? "",
+      originallyAvailableAt: metadata.originallyAvailableAt ?? "",
+      contentRating: metadata.contentRating ?? "",
+      year: metadata.year ? String(metadata.year) : "",
+      index: metadata.index !== undefined ? String(metadata.index) : "",
+      parentIndex:
+        metadata.parentIndex !== undefined ? String(metadata.parentIndex) : "",
+      posterUrl: "",
+      artUrl: "",
+      thumbUrl: "",
+    });
+  }, [metadata]);
+
+  useEffect(() => {
+    if (!isImageEditorOpen || !metadata || !canEditCurrentMetadata) return;
+
+    let cancelled = false;
+    const unique = (values: string[]) => Array.from(new Set(values.filter(Boolean)));
+    const sortByLikes = (a: { likes: string }, b: { likes: string }) =>
+      parseInt(b.likes || "0", 10) - parseInt(a.likes || "0", 10);
+
+    const loadSuggestions = async () => {
+      setLoadingImageSuggestions(true);
+      setImageSuggestions({ poster: [], art: [], thumb: [] });
+
+      let target: Plex.Metadata | null = metadata;
+      if (metadata.type === "season" && metadata.parentRatingKey) {
+        target = await ServerApi.metadata({ id: metadata.parentRatingKey });
+      } else if (metadata.type === "episode" && metadata.grandparentRatingKey) {
+        target = await ServerApi.metadata({ id: metadata.grandparentRatingKey });
+      }
+      if (!target || cancelled) {
+        setLoadingImageSuggestions(false);
+        return;
+      }
+
+      let poster: string[] = [];
+      let art: string[] = [];
+      let thumb: string[] = [];
+
+      if (target.type === "show") {
+        const guids = (target as Plex.Metadata & { Guid?: Array<{ id: string }> }).Guid;
+        let tvdbId = extractTvdbIdFromGuids(guids);
+        if (!tvdbId) tvdbId = extractTvdbId(target.guid);
+        if (tvdbId) {
+          const artwork = await fetchTvShowArtwork(tvdbId);
+          if (artwork) {
+            poster = unique(
+              [
+                ...(artwork.tvposter ?? []),
+                ...(artwork.seasonposter ?? []),
+              ]
+                .sort(sortByLikes)
+                .map((img) => img.url),
+            );
+            art = unique(
+              (artwork.showbackground ?? []).sort(sortByLikes).map((img) => img.url),
+            );
+            thumb = unique(
+              [
+                ...(artwork.tvthumb ?? []),
+                ...(artwork.seasonthumb ?? []),
+              ]
+                .sort(sortByLikes)
+                .map((img) => img.url),
+            );
+          }
+        }
+      } else if (target.type === "movie") {
+        const guids = (target as Plex.Metadata & { Guid?: Array<{ id: string }> }).Guid;
+        let tmdbId = extractTmdbIdFromGuids(guids);
+        if (!tmdbId) tmdbId = extractTmdbId(target.guid);
+        if (tmdbId) {
+          const artwork = await fetchMovieArtwork(tmdbId);
+          if (artwork) {
+            poster = unique(
+              (artwork.movieposter ?? []).sort(sortByLikes).map((img) => img.url),
+            );
+            art = unique(
+              (artwork.moviebackground ?? []).sort(sortByLikes).map((img) => img.url),
+            );
+            thumb = unique(
+              (artwork.moviethumb ?? []).sort(sortByLikes).map((img) => img.url),
+            );
+          }
+        }
+      }
+
+      if (cancelled) return;
+      setImageSuggestions({
+        poster: poster.slice(0, 20),
+        art: art.slice(0, 20),
+        thumb: thumb.slice(0, 20),
+      });
+      setLoadingImageSuggestions(false);
+    };
+
+    loadSuggestions();
+    return () => {
+      cancelled = true;
+    };
+  }, [isImageEditorOpen, metadata, canEditCurrentMetadata]);
+
+  useEffect(() => {
+    if (!metadata || !canEditCurrentMetadata) return;
+    const shouldOpenEditor = searchParams.get("edit") === "1";
+    if (!shouldOpenEditor) return;
+    if (autoEditOpenedForMidRef.current === metadata.ratingKey) return;
+    autoEditOpenedForMidRef.current = metadata.ratingKey;
+    setMetadataSaveError(null);
+    setMetadataEditorOpen(true);
+  }, [searchParams, metadata, canEditCurrentMetadata]);
+
+  useEffect(() => {
     closeButtonRef.current?.scrollIntoView(false);
     if (mid && close) close();
   }, [mid]);
@@ -314,6 +498,7 @@ export const MetaScreenYaflix: FC = () => {
     params.delete("mid");
     params.delete("iid");
     params.delete("pid");
+    params.delete("edit");
     router.replace(`${pathname}?${params}`, { scroll: false });
   };
 
@@ -504,6 +689,140 @@ export const MetaScreenYaflix: FC = () => {
         router.refresh();
       }
     }
+  };
+
+  const handleSaveMetadata = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!metadata || !canEditCurrentMetadata) return;
+
+    setSavingMetadata(true);
+    setMetadataSaveError(null);
+
+    const parsedYear = metadataForm.year.trim()
+      ? Number(metadataForm.year.trim())
+      : undefined;
+    const parsedIndex = metadataForm.index.trim()
+      ? Number(metadataForm.index.trim())
+      : undefined;
+    const parsedParentIndex = metadataForm.parentIndex.trim()
+      ? Number(metadataForm.parentIndex.trim())
+      : undefined;
+
+    if (parsedYear !== undefined && Number.isNaN(parsedYear)) {
+      setMetadataSaveError("El ano debe ser un numero valido.");
+      setSavingMetadata(false);
+      return;
+    }
+    if (parsedIndex !== undefined && Number.isNaN(parsedIndex)) {
+      setMetadataSaveError("El numero de episodio/temporada debe ser valido.");
+      setSavingMetadata(false);
+      return;
+    }
+    if (parsedParentIndex !== undefined && Number.isNaN(parsedParentIndex)) {
+      setMetadataSaveError("El numero de temporada debe ser valido.");
+      setSavingMetadata(false);
+      return;
+    }
+    if (
+      metadataForm.originallyAvailableAt.trim() &&
+      !/^\d{4}-\d{2}-\d{2}$/.test(metadataForm.originallyAvailableAt.trim())
+    ) {
+      setMetadataSaveError("La fecha debe estar en formato YYYY-MM-DD.");
+      setSavingMetadata(false);
+      return;
+    }
+
+    const saved = await ServerApi.updateMetadata({
+      ratingKey: metadata.ratingKey,
+      librarySectionID: metadata.librarySectionID,
+      type: metadata.type,
+      title: metadataForm.title.trim(),
+      titleSort: metadataForm.titleSort.trim(),
+      originalTitle: metadataForm.originalTitle.trim(),
+      summary: metadataForm.summary.trim(),
+      tagline: metadataForm.tagline.trim(),
+      studio: metadataForm.studio.trim(),
+      originallyAvailableAt: metadataForm.originallyAvailableAt.trim(),
+      contentRating: metadataForm.contentRating.trim(),
+      year: parsedYear,
+      ...(metadata.type === "season" || metadata.type === "episode"
+        ? { index: parsedIndex }
+        : {}),
+      ...(metadata.type === "episode" ? { parentIndex: parsedParentIndex } : {}),
+    });
+
+    if (!saved) {
+      setSavingMetadata(false);
+      setMetadataSaveError(
+        "No se pudo guardar. Verifica permisos de administrador en Plex.",
+      );
+      return;
+    }
+
+    setSavingMetadata(false);
+
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["metadata"] }),
+      queryClient.invalidateQueries({ queryKey: ["related"] }),
+    ]);
+    router.refresh();
+    setMetadataEditorOpen(false);
+  };
+
+  const handleSaveImages = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!metadata || !canEditCurrentMetadata) return;
+
+    setSavingImages(true);
+    setImageSaveError(null);
+
+    const imageUrls = [
+      metadataForm.posterUrl.trim(),
+      metadataForm.artUrl.trim(),
+      metadataForm.thumbUrl.trim(),
+    ].filter((value) => value.length > 0);
+
+    if (imageUrls.length === 0) {
+      setImageSaveError("Agrega al menos una URL de imagen.");
+      setSavingImages(false);
+      return;
+    }
+
+    const hasInvalidUrl = imageUrls.some((value) => {
+      try {
+        const url = new URL(value);
+        return !(url.protocol === "http:" || url.protocol === "https:");
+      } catch {
+        return true;
+      }
+    });
+
+    if (hasInvalidUrl) {
+      setImageSaveError("Las imagenes deben ser URLs validas (http/https).");
+      setSavingImages(false);
+      return;
+    }
+
+    const saved = await ServerApi.updateMetadataImages({
+      ratingKey: metadata.ratingKey,
+      posterUrl: metadataForm.posterUrl,
+      artUrl: metadataForm.artUrl,
+      thumbUrl: metadataForm.thumbUrl,
+    });
+
+    setSavingImages(false);
+
+    if (!saved) {
+      setImageSaveError("No se pudieron actualizar las imagenes.");
+      return;
+    }
+
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["metadata"] }),
+      queryClient.invalidateQueries({ queryKey: ["related"] }),
+    ]);
+    router.refresh();
+    setImageEditorOpen(false);
   };
 
   const updateScrollArrows = () => {
@@ -791,6 +1110,18 @@ export const MetaScreenYaflix: FC = () => {
                         </svg>
                       )}
                     </Button>
+                    {canEditCurrentMetadata && (
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          setMetadataSaveError(null);
+                          setMetadataEditorOpen(true);
+                        }}
+                        className="text-white border-white/40 bg-black/30 hover:bg-white/15 hover:text-white"
+                      >
+                        Editar metadatos
+                      </Button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -1143,6 +1474,349 @@ export const MetaScreenYaflix: FC = () => {
           </div>
         </div>
       </DialogContent>
+      <Dialog open={isMetadataEditorOpen} onOpenChange={setMetadataEditorOpen}>
+        <DialogContent className="max-w-2xl bg-zinc-950 border-white/15 text-white">
+          <DialogTitle>Editar metadatos</DialogTitle>
+          <DialogDescription className="text-white/70">
+            Cambios para {metadata?.type ?? "contenido"}.
+          </DialogDescription>
+          <form className="space-y-4" onSubmit={handleSaveMetadata}>
+            <div className="space-y-2">
+              <label className="text-sm text-white/80">Titulo</label>
+              <Input
+                value={metadataForm.title}
+                onChange={(e) =>
+                  setMetadataForm((prev) => ({ ...prev, title: e.target.value }))
+                }
+                className="bg-black/30 border-white/20 text-white"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm text-white/80">Titulo ordenado</label>
+                <Input
+                  value={metadataForm.titleSort}
+                  onChange={(e) =>
+                    setMetadataForm((prev) => ({
+                      ...prev,
+                      titleSort: e.target.value,
+                    }))
+                  }
+                  className="bg-black/30 border-white/20 text-white"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm text-white/80">Titulo original</label>
+                <Input
+                  value={metadataForm.originalTitle}
+                  onChange={(e) =>
+                    setMetadataForm((prev) => ({
+                      ...prev,
+                      originalTitle: e.target.value,
+                    }))
+                  }
+                  className="bg-black/30 border-white/20 text-white"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm text-white/80">Resumen</label>
+              <textarea
+                value={metadataForm.summary}
+                onChange={(e) =>
+                  setMetadataForm((prev) => ({ ...prev, summary: e.target.value }))
+                }
+                rows={4}
+                className="w-full rounded-md border border-white/20 bg-black/30 px-3 py-2 text-sm text-white"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm text-white/80">Tagline</label>
+                <Input
+                  value={metadataForm.tagline}
+                  onChange={(e) =>
+                    setMetadataForm((prev) => ({ ...prev, tagline: e.target.value }))
+                  }
+                  className="bg-black/30 border-white/20 text-white"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm text-white/80">Estudio</label>
+                <Input
+                  value={metadataForm.studio}
+                  onChange={(e) =>
+                    setMetadataForm((prev) => ({ ...prev, studio: e.target.value }))
+                  }
+                  className="bg-black/30 border-white/20 text-white"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm text-white/80">Clasificacion</label>
+                <Input
+                  value={metadataForm.contentRating}
+                  onChange={(e) =>
+                    setMetadataForm((prev) => ({
+                      ...prev,
+                      contentRating: e.target.value,
+                    }))
+                  }
+                  className="bg-black/30 border-white/20 text-white"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm text-white/80">Ano</label>
+                <Input
+                  value={metadataForm.year}
+                  onChange={(e) =>
+                    setMetadataForm((prev) => ({ ...prev, year: e.target.value }))
+                  }
+                  className="bg-black/30 border-white/20 text-white"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm text-white/80">
+                Fecha estreno (YYYY-MM-DD)
+              </label>
+              <Input
+                value={metadataForm.originallyAvailableAt}
+                onChange={(e) =>
+                  setMetadataForm((prev) => ({
+                    ...prev,
+                    originallyAvailableAt: e.target.value,
+                  }))
+                }
+                className="bg-black/30 border-white/20 text-white"
+              />
+            </div>
+
+            {(metadata?.type === "season" || metadata?.type === "episode") && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-sm text-white/80">
+                    {metadata?.type === "episode"
+                      ? "Numero de episodio"
+                      : "Numero de temporada"}
+                  </label>
+                  <Input
+                    value={metadataForm.index}
+                    onChange={(e) =>
+                      setMetadataForm((prev) => ({ ...prev, index: e.target.value }))
+                    }
+                    className="bg-black/30 border-white/20 text-white"
+                  />
+                </div>
+                {metadata?.type === "episode" && (
+                  <div className="space-y-2">
+                    <label className="text-sm text-white/80">
+                      Numero de temporada
+                    </label>
+                    <Input
+                      value={metadataForm.parentIndex}
+                      onChange={(e) =>
+                        setMetadataForm((prev) => ({
+                          ...prev,
+                          parentIndex: e.target.value,
+                        }))
+                      }
+                      className="bg-black/30 border-white/20 text-white"
+                    />
+                  </div>
+                )}
+              </div>
+            )}
+
+            {metadataSaveError && (
+              <p className="text-sm text-red-400">{metadataSaveError}</p>
+            )}
+
+            <div className="flex justify-end gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                className="border-white/30 bg-transparent text-white hover:bg-white/10 hover:text-white"
+                onClick={() => {
+                  setImageSaveError(null);
+                  setImageEditorOpen(true);
+                }}
+              >
+                Gestionar imagenes
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                className="border-white/30 bg-transparent text-white hover:bg-white/10 hover:text-white"
+                onClick={() => setMetadataEditorOpen(false)}
+                disabled={savingMetadata}
+              >
+                Cancelar
+              </Button>
+              <Button
+                type="submit"
+                className="bg-plex hover:bg-plex/80 text-white"
+                disabled={savingMetadata}
+              >
+                {savingMetadata ? "Guardando..." : "Guardar cambios"}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={isImageEditorOpen} onOpenChange={setImageEditorOpen}>
+        <DialogContent className="max-w-3xl bg-zinc-950 border-white/15 text-white">
+          <DialogTitle>Gestionar imagenes</DialogTitle>
+          <DialogDescription className="text-white/70">
+            Cambia poster, fondo y miniatura.
+          </DialogDescription>
+          <form className="space-y-4" onSubmit={handleSaveImages}>
+            <div className="space-y-3 rounded-md border border-white/15 p-3 bg-black/20">
+              <p className="text-sm font-medium text-white/90">URLs de imagen</p>
+              <p className="text-xs text-white/60">
+                Pega URLs publicas. Plex descargara y aplicara las imagenes.
+              </p>
+              <div className="grid grid-cols-1 gap-3">
+                <div className="space-y-2">
+                  <label className="text-sm text-white/80">Poster URL</label>
+                  <Input
+                    value={metadataForm.posterUrl}
+                    onChange={(e) =>
+                      setMetadataForm((prev) => ({
+                        ...prev,
+                        posterUrl: e.target.value,
+                      }))
+                    }
+                    placeholder="https://..."
+                    className="bg-black/30 border-white/20 text-white"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm text-white/80">Fondo URL</label>
+                  <Input
+                    value={metadataForm.artUrl}
+                    onChange={(e) =>
+                      setMetadataForm((prev) => ({
+                        ...prev,
+                        artUrl: e.target.value,
+                      }))
+                    }
+                    placeholder="https://..."
+                    className="bg-black/30 border-white/20 text-white"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm text-white/80">Miniatura URL</label>
+                  <Input
+                    value={metadataForm.thumbUrl}
+                    onChange={(e) =>
+                      setMetadataForm((prev) => ({
+                        ...prev,
+                        thumbUrl: e.target.value,
+                      }))
+                    }
+                    placeholder="https://..."
+                    className="bg-black/30 border-white/20 text-white"
+                  />
+                </div>
+              </div>
+              <div className="pt-2 border-t border-white/10">
+                <p className="text-xs text-white/70 mb-2">
+                  Sugerencias automáticas (como Plex):
+                </p>
+                {loadingImageSuggestions ? (
+                  <p className="text-xs text-white/50">Buscando imágenes...</p>
+                ) : (
+                  <div className="space-y-3">
+                    <SuggestionStrip
+                      title="Posters sugeridos"
+                      items={imageSuggestions.poster}
+                      onSelect={(value) =>
+                        setMetadataForm((prev) => ({ ...prev, posterUrl: value }))
+                      }
+                    />
+                    <SuggestionStrip
+                      title="Fondos sugeridos"
+                      items={imageSuggestions.art}
+                      onSelect={(value) =>
+                        setMetadataForm((prev) => ({ ...prev, artUrl: value }))
+                      }
+                    />
+                    <SuggestionStrip
+                      title="Miniaturas sugeridas"
+                      items={imageSuggestions.thumb}
+                      onSelect={(value) =>
+                        setMetadataForm((prev) => ({ ...prev, thumbUrl: value }))
+                      }
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {imageSaveError && (
+              <p className="text-sm text-red-400">{imageSaveError}</p>
+            )}
+
+            <div className="flex justify-end gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                className="border-white/30 bg-transparent text-white hover:bg-white/10 hover:text-white"
+                onClick={() => setImageEditorOpen(false)}
+                disabled={savingImages}
+              >
+                Cancelar
+              </Button>
+              <Button
+                type="submit"
+                className="bg-plex hover:bg-plex/80 text-white"
+                disabled={savingImages}
+              >
+                {savingImages ? "Guardando..." : "Guardar imagenes"}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
     </Dialog>
+  );
+};
+
+const SuggestionStrip: FC<{
+  title: string;
+  items: string[];
+  onSelect: (value: string) => void;
+}> = ({ title, items, onSelect }) => {
+  if (!items.length) return null;
+
+  return (
+    <div className="space-y-2">
+      <p className="text-xs text-white/70">{title}</p>
+      <div className="flex gap-2 overflow-x-auto pb-1">
+        {items.map((url) => (
+          <button
+            key={url}
+            type="button"
+            onClick={() => onSelect(url)}
+            className="shrink-0 rounded border border-white/20 overflow-hidden hover:border-plex transition-colors"
+            title="Usar imagen"
+          >
+            <img
+              src={url}
+              alt={title}
+              className="w-24 h-14 object-cover bg-black/40"
+              loading="lazy"
+            />
+          </button>
+        ))}
+      </div>
+    </div>
   );
 };

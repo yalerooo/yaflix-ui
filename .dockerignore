@@ -1,0 +1,12 @@
+.git
+.github
+.codex
+.next
+node_modules
+npm-debug.log*
+pnpm-debug.log*
+*.log
+demo.gif
+demo.png
+.DS_Store
+*.tsbuildinfo

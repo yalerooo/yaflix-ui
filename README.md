@@ -34,6 +34,28 @@ You can also run Yaflix using Docker:
     ```
 3. Access the application at http://localhost:3000.
 
+### Docker Deployment on Linux (easy updates)
+
+If you want to host it on a Linux laptop and update it easily:
+
+1. Install Docker + Docker Compose plugin.
+2. Clone the repo on the Linux machine.
+3. Start it:
+   ```bash
+   docker compose up -d --build
+   ```
+4. Update later with:
+   ```bash
+   git pull
+   docker compose up -d --build
+   ```
+5. Check logs if needed:
+   ```bash
+   docker compose logs -f app
+   ```
+
+The container is configured with `restart: unless-stopped`, so it will come back up after a reboot.
+
 ## Contributing
 
 Yaflix is in active development, and contributions are welcome! If you encounter any bugs or have suggestions for new features, please open a [GitHub issue](https://github.com/ricoloic/yaflix/issues/new).

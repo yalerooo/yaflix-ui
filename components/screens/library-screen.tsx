@@ -1,11 +1,32 @@
 import { FC, useState, useMemo } from "react";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { usePathname, useRouter } from "next/navigation";
-import { Search, X } from "lucide-react";
+import { Pencil, Search, X } from "lucide-react";
 import { useItemKeyMetadata } from "@/hooks/use-item-key-metadata";
 import { getPosterImage, getCoverImage } from "@/hooks/use-hub-item";
 import { motion } from "framer-motion";
 import qs from "qs";
+import { useSession } from "@/hooks/use-session";
+
+const canEditType = (type: Plex.LibraryType) => {
+  return (
+    type === "movie" ||
+    type === "show" ||
+    type === "season" ||
+    type === "episode"
+  );
+};
+
+const isAdminUser = (user: Plex.UserData | null) => {
+  if (!user) return false;
+  const sessionUser = user as Plex.UserData & {
+    homeAdmin?: boolean;
+    restricted?: boolean;
+  };
+  if (typeof sessionUser.homeAdmin === "boolean") return sessionUser.homeAdmin;
+  if (typeof sessionUser.restricted === "boolean") return !sessionUser.restricted;
+  return !!sessionUser.email;
+};
 
 export const LibraryScreen: FC<{
   keypath: string | undefined;
@@ -14,6 +35,8 @@ export const LibraryScreen: FC<{
 }> = ({ keypath: key, title, contentDirectoryID }) => {
   const router = useRouter();
   const pathname = usePathname();
+  const { user } = useSession();
+  const isAdmin = isAdminUser(user);
   const { loading, metadata, lastRef } = useItemKeyMetadata(
     key,
     contentDirectoryID,
@@ -143,17 +166,31 @@ export const LibraryScreen: FC<{
                     : null;
                 
                 return (
-                  <motion.button
+                  <motion.div
                     key={i}
                     ref={
                       i === metadata.length - 1
-                        ? (lastRef as (node: HTMLButtonElement) => void)
+                        ? (lastRef as (node: HTMLDivElement) => void)
                         : undefined
                     }
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: Math.min(i * 0.03, 0.5) }}
-                    className="group text-left transition-all duration-300 hover:scale-[1.03]"
+                    className="group text-left transition-all duration-300 hover:scale-[1.03] cursor-pointer"
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key !== "Enter" && e.key !== " ") return;
+                      e.preventDefault();
+                      if (isCollection) {
+                        router.push(
+                          `${pathname}?${qs.stringify({ key: item.key, libtitle: item.title })}`,
+                          { scroll: false },
+                        );
+                        return;
+                      }
+                      router.push(`${pathname}?mid=${item.ratingKey}`, { scroll: false });
+                    }}
                     onClick={() => {
                       if (isCollection) {
                         router.push(
@@ -166,6 +203,22 @@ export const LibraryScreen: FC<{
                     }}
                   >
                     <div className="relative aspect-[2/3] rounded-xl overflow-hidden border border-white/10 hover:border-white/30 transition-all duration-300 hover:shadow-2xl hover:shadow-black/50 bg-white/5">
+                      {isAdmin && canEditType(item.type) && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            router.push(
+                              `${pathname}?${qs.stringify({ mid: item.ratingKey, edit: 1 })}`,
+                              { scroll: false },
+                            );
+                          }}
+                          className="absolute top-2 left-2 z-20 w-7 h-7 rounded-full bg-black/70 hover:bg-black/90 flex items-center justify-center transition-all opacity-0 group-hover:opacity-100 backdrop-blur-sm"
+                          title="Editar metadatos"
+                        >
+                          <Pencil className="w-3.5 h-3.5 text-white" />
+                        </button>
+                      )}
                       {posterSrc ? (
                         <img
                           loading="lazy"
@@ -201,7 +254,7 @@ export const LibraryScreen: FC<{
                         )}
                       </div>
                     </div>
-                  </motion.button>
+                  </motion.div>
                 );
               })}
             </motion.div>

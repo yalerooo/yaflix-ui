@@ -1,0 +1,12 @@
+
+> yaflix-ui@0.1.0 dev C:\Github\plexy-main
+> next dev
+
+ ⚠ Port 3000 is in use, trying 3001 instead.
+  ▲ Next.js 14.2.35
+  - Local:        http://localhost:3001
+  - Environments: .env
+
+ ✓ Starting...
+ ✓ Ready in 1206ms
+^C ELIFECYCLE  Command failed with exit code 3221225786.

@@ -9,7 +9,7 @@ import {
 } from "react";
 import qs from "qs";
 import { usePathname, useRouter } from "next/navigation";
-import { ChevronDown, ChevronRight, Play, X } from "lucide-react";
+import { ChevronDown, ChevronRight, Pencil, Play, X } from "lucide-react";
 import { Carousel, CarouselItem } from "@/components/carousel";
 import { OnDeckImagePreviewItem } from "@/components/cards/on-deck-image-preview-item";
 import { OtherImagePreviewItem } from "@/components/cards/other-image-preview-item";
@@ -20,6 +20,27 @@ import { Button } from "@/components/ui/button";
 import { ServerApi, xprops } from "@/api";
 import axios, { Canceler } from "axios";
 import { useIsSize } from "@/hooks/use-is-size";
+import { useSession } from "@/hooks/use-session";
+
+const canEditType = (type: Plex.LibraryType) => {
+  return (
+    type === "movie" ||
+    type === "show" ||
+    type === "season" ||
+    type === "episode"
+  );
+};
+
+const isAdminUser = (user: Plex.UserData | null) => {
+  if (!user) return false;
+  const sessionUser = user as Plex.UserData & {
+    homeAdmin?: boolean;
+    restricted?: boolean;
+  };
+  if (typeof sessionUser.homeAdmin === "boolean") return sessionUser.homeAdmin;
+  if (typeof sessionUser.restricted === "boolean") return !sessionUser.restricted;
+  return !!sessionUser.email;
+};
 
 const HubFloatingItem = ({
   info,
@@ -199,7 +220,11 @@ const HubItem = forwardRef<
   }
 >(({ item, index, refKey, isOnDeck, isContinueWatching, onUpdate }, ref) => {
   const info = useHubItem(item, { higherResolution: true });
+  const router = useRouter();
+  const pathname = usePathname();
+  const { user } = useSession();
   const { isEpisode, isSeason, isShow, isMovie } = info;
+  const canEdit = isAdminUser(user) && canEditType(item.type);
 
   const handleRemoveFromContinueWatching = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -224,6 +249,22 @@ const HubItem = forwardRef<
       }
     >
       <div className="relative">
+        {canEdit && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              e.preventDefault();
+              router.push(
+                `${pathname}?${qs.stringify({ mid: item.ratingKey, edit: 1 })}`,
+                { scroll: false },
+              );
+            }}
+            className="absolute top-2 left-2 z-10 w-7 h-7 rounded-full bg-black/70 hover:bg-black/90 flex items-center justify-center transition-all opacity-0 group-hover:opacity-100 glass-dark"
+            title="Editar metadatos"
+          >
+            <Pencil className="w-3.5 h-3.5 text-white" />
+          </button>
+        )}
         {isContinueWatching && (
           <button
             onClick={handleRemoveFromContinueWatching}

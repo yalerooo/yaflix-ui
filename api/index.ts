@@ -146,6 +146,30 @@ export interface RecommendationShelf {
   key: string;
 }
 
+export interface MetadataUpdatePayload {
+  ratingKey: string;
+  librarySectionID: number;
+  type: Plex.LibraryType;
+  title?: string;
+  titleSort?: string;
+  originalTitle?: string;
+  summary?: string;
+  tagline?: string;
+  studio?: string;
+  originallyAvailableAt?: string;
+  contentRating?: string;
+  year?: number;
+  index?: number;
+  parentIndex?: number;
+}
+
+export interface MetadataImageUpdatePayload {
+  ratingKey: string;
+  posterUrl?: string;
+  artUrl?: string;
+  thumbUrl?: string;
+}
+
 export class Api {
   static async pin(props: { uuid: string }) {
     return axios.post<{ id: number; code: string }>(
@@ -204,6 +228,102 @@ export class Api {
 }
 
 export class ServerApi {
+  static async updateMetadata({
+    ratingKey,
+    librarySectionID,
+    type,
+    ...fields
+  }: MetadataUpdatePayload) {
+    const plexTypeMap: Partial<Record<Plex.LibraryType, number>> = {
+      movie: 1,
+      show: 2,
+      season: 3,
+      episode: 4,
+      clip: 12,
+      collection: 18,
+      artist: 8,
+      photo: 13,
+      track: 10,
+      album: 9,
+    };
+
+    const normalizedEntries = Object.entries(fields).filter(([, value]) => {
+      return value !== undefined && value !== null;
+    });
+
+    if (normalizedEntries.length === 0) {
+      return true;
+    }
+
+    const query: Record<string, number | string> = {
+      type: plexTypeMap[type] ?? 1,
+      id: ratingKey,
+      ...xprops(),
+    };
+
+    for (const [field, rawValue] of normalizedEntries) {
+      const value = typeof rawValue === "string" ? rawValue.trim() : rawValue;
+      query[`${field}.value`] = value as string | number;
+      query[`${field}.locked`] = 1;
+    }
+
+    return await axios
+      .put(
+        `${localStorage.getItem("server")}/library/sections/${librarySectionID}/all?${qs.stringify(query)}`,
+        null,
+        {
+          headers: {
+            "X-Plex-Token": localStorage.getItem("token") as string,
+            accept: "application/json",
+          },
+        },
+      )
+      .then((res) => res.status >= 200 && res.status < 300)
+      .catch((err) => {
+        console.error(err);
+        return false;
+      });
+  }
+  static async updateMetadataImages({
+    ratingKey,
+    posterUrl,
+    artUrl,
+    thumbUrl,
+  }: MetadataImageUpdatePayload) {
+    const server = localStorage.getItem("server");
+    const token = localStorage.getItem("token") as string;
+    if (!server || !token) return false;
+
+    const updates = [
+      { endpoint: "posters", url: posterUrl?.trim() ?? "" },
+      { endpoint: "arts", url: artUrl?.trim() ?? "" },
+      { endpoint: "thumbs", url: thumbUrl?.trim() ?? "" },
+    ].filter((item) => item.url.length > 0);
+
+    if (updates.length === 0) return true;
+
+    try {
+      for (const update of updates) {
+        await axios.post(
+          `${server}/library/metadata/${ratingKey}/${update.endpoint}?${qs.stringify({
+            url: update.url,
+            ...xprops(),
+          })}`,
+          null,
+          {
+            headers: {
+              "X-Plex-Token": token,
+              accept: "application/json",
+            },
+          },
+        );
+      }
+      return true;
+    } catch (err) {
+      console.error(err);
+      return false;
+    }
+  }
   static async validate({ token }: { token: string }) {
     return await axios
       .get(`${localStorage.getItem("server")}/?X-Plex-Token=${token}`)
