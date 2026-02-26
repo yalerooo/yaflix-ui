@@ -1,3 +1,8 @@
+"use client";
+
+import { useSettings } from "@/components/settings-provider";
+
 export default function Page() {
-  return <p>You will be redirected soon...</p>;
+  const { t } = useSettings();
+  return <p>{t("login.redirecting")}</p>;
 }

@@ -15,6 +15,7 @@ import { LibraryAndServer, useServer } from "@/components/server-provider";
 import { ReactNode, useEffect, useState } from "react";
 import { fetchConnectionLibrary } from "@/lib/server";
 import { cn } from "@/lib/utils";
+import { useSettings } from "@/components/settings-provider";
 
 // helper function to format the connection URL for display
 const formatConnectionUrl = (connection: PlexConnection) => {
@@ -65,6 +66,7 @@ function ConnectionButton({
   selected: LibraryAndServer;
   onSelect: (info: LibraryAndServer) => void;
 }) {
+  const { t } = useSettings();
   const [status, setStatus] = useState<"loading" | "success" | "fail">(
     "loading",
   );
@@ -93,8 +95,8 @@ function ConnectionButton({
     >
       <p className="truncate">
         {formatConnectionUrl(connection)}
-        {connection.local && " (local)"}
-        {connection.relay && " (relay)"}
+        {connection.local && ` ${t("changeServer.localTag")}`}
+        {connection.relay && ` ${t("changeServer.relayTag")}`}
       </p>
     </Button>
   );
@@ -102,15 +104,16 @@ function ConnectionButton({
 
 export function ChangeServerDialog({ trigger }: { trigger: ReactNode }) {
   const { servers, server, handleServerSelection } = useServer();
+  const { t } = useSettings();
   const [selected, setSelected] = useState<LibraryAndServer>(server);
   return (
     <Dialog>
       <DialogTrigger asChild>{trigger}</DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Select Server</DialogTitle>
+          <DialogTitle>{t("changeServer.title")}</DialogTitle>
           <DialogDescription>
-            Choose a plex server to connect to.
+            {t("changeServer.description")}
           </DialogDescription>
         </DialogHeader>
         <DialogBody className="overflow-hidden space-y-2">
@@ -143,7 +146,7 @@ export function ChangeServerDialog({ trigger }: { trigger: ReactNode }) {
             }}
             disabled={selected.connection.uri === server.connection.uri}
           >
-            Connect
+            {t("changeServer.connect")}
           </Button>
         </DialogFooter>
       </DialogContent>

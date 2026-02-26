@@ -21,6 +21,7 @@ import { ServerApi, xprops } from "@/api";
 import axios, { Canceler } from "axios";
 import { useIsSize } from "@/hooks/use-is-size";
 import { useSession } from "@/hooks/use-session";
+import { useSettings } from "@/components/settings-provider";
 
 const canEditType = (type: Plex.LibraryType) => {
   return (
@@ -53,6 +54,7 @@ const HubFloatingItem = ({
   onUpdate: (item: Plex.HubMetadata) => void;
   isContinueWatching?: boolean;
 }) => {
+  const { t } = useSettings();
   const handleUpdate = () => {
     if (info.guid) {
       ServerApi.discoverMetadata({ guid: info.guid });
@@ -167,7 +169,7 @@ const HubFloatingItem = ({
                 <span className="uppercase">
                   {info.isSeason && `s${item.index}`}
                   {info.isEpisode && `s${item.parentIndex} e${item.index}`}
-                  {info.isShow && `seasons ${item.childCount}`} -&nbsp;
+                  {info.isShow && `${t("common.seasons")} ${item.childCount}`} -&nbsp;
                 </span>
               )}
               {item.title}
@@ -340,6 +342,7 @@ export const HubSlider: FC<{
 }> = ({ id = undefined, hub, onUpdate, onAppend }) => {
   const router = useRouter();
   const pathname = usePathname();
+  const { t } = useSettings();
   const token = localStorage.getItem("token");
   const server = localStorage.getItem("server");
   const { isTiny } = useIsSize();

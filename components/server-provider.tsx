@@ -18,6 +18,7 @@ import {
   InputOTPGroup,
   InputOTPSlot,
 } from "@/components/ui/input-otp";
+import { useSettings } from "@/components/settings-provider";
 
 export type LibraryAndServer = {
   libraries: Plex.LibrarySection[];
@@ -39,6 +40,7 @@ const Context = createContext(
 );
 
 export function ServerProvider({ children }: { children: ReactNode }) {
+  const { t } = useSettings();
   const [servers, setServers] = useState<PlexServer[]>([]);
   const [server, setServer] = useState<LibraryAndServer | null>(null);
   const [loading, setLoading] = useState(true);
@@ -69,7 +71,7 @@ export function ServerProvider({ children }: { children: ReactNode }) {
       .then(({ list, info, controllers: aborts }) => {
         if (aborts) controllers = aborts;
         if (list.length === 0) {
-          setError("No se encontraron servidores Plex disponibles.");
+          setError(t("server.noServersFound"));
           return;
         }
         if (!server && info) {
@@ -84,7 +86,7 @@ export function ServerProvider({ children }: { children: ReactNode }) {
         if (err.message?.includes('No se ha podido conectar')) {
           setError(err.message);
         } else {
-          setError("No se ha podido conectar con Plex. Por favor, verifica tu conexión e intenta nuevamente.");
+          setError(t("server.connectError"));
         }
       })
       .finally(() => {
@@ -131,7 +133,7 @@ export function ServerProvider({ children }: { children: ReactNode }) {
         { method: "GET" }
       );
     } catch (error) {
-      console.error("Failed to scan library:", error);
+      console.error(t("server.scanLibraryError"), error);
     }
   };
 
@@ -183,13 +185,15 @@ export function ServerProvider({ children }: { children: ReactNode }) {
               <line x1="12" y1="8" x2="12" y2="12"></line>
               <line x1="12" y1="16" x2="12.01" y2="16"></line>
             </svg>
-            <h2 className="text-xl font-semibold text-white">Error de Conexión</h2>
+            <h2 className="text-xl font-semibold text-white">
+              {t("server.connectionErrorTitle")}
+            </h2>
             <p className="text-white/80">{error}</p>
             <button
               onClick={() => window.location.reload()}
               className="mt-4 px-6 py-2 bg-plex hover:bg-plex/80 text-white rounded-full font-semibold transition-colors"
             >
-              Reintentar
+              {t("server.retry")}
             </button>
           </div>
         </div>
@@ -240,6 +244,7 @@ function mapUser(
 }
 
 function UserSelect() {
+  const { t } = useSettings();
   const [users, setUsers] = useState<
     Pick<Plex.UserData, "uuid" | "title" | "thumb" | "hasPassword">[]
   >([]);
@@ -292,10 +297,10 @@ function UserSelect() {
     <div className="min-h-[70vh] px-6 py-10 sm:px-10 md:px-16 flex flex-col items-center justify-center gap-8">
       <div className="text-center space-y-1">
         <p className="font-semibold text-2xl sm:text-3xl tracking-tight">
-          Select a User
+          {t("userSelect.title")}
         </p>
         <p className="text-sm text-muted-foreground">
-          Choose a profile to continue
+          {t("userSelect.subtitle")}
         </p>
       </div>
 

@@ -41,24 +41,24 @@ export default function Providers({ children }: { children: ReactNode }) {
       disableTransitionOnChange
     >
       <QueryClientProvider client={client}>
-        <AuthProvider>
-          <SessionProvider>
-            <CarouselWrapper>
-              <Suspense fallback={null}>
-                <MetaScreenYaflix />
-                <WatchScreen watch={watch ?? undefined} />
-                <LibraryScreen
-                  contentDirectoryID={contentDirectoryID ?? undefined}
-                  title={libtitle ?? undefined}
-                  keypath={key ?? undefined}
-                />
-              </Suspense>
-              <SearchProvider>
-                <SettingsProvider>{children}</SettingsProvider>
-              </SearchProvider>
-            </CarouselWrapper>
-          </SessionProvider>
-        </AuthProvider>
+        <SettingsProvider>
+          <AuthProvider>
+            <SessionProvider>
+              <CarouselWrapper>
+                <Suspense fallback={null}>
+                  <MetaScreenYaflix />
+                  <WatchScreen watch={watch ?? undefined} />
+                  <LibraryScreen
+                    contentDirectoryID={contentDirectoryID ?? undefined}
+                    title={libtitle ?? undefined}
+                    keypath={key ?? undefined}
+                  />
+                </Suspense>
+                <SearchProvider>{children}</SearchProvider>
+              </CarouselWrapper>
+            </SessionProvider>
+          </AuthProvider>
+        </SettingsProvider>
       </QueryClientProvider>
     </ThemeProvider>
   );

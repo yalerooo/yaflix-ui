@@ -1,10 +1,12 @@
 import { forwardRef } from "react";
 import { getCoverImage, useHubItem } from "@/hooks/use-hub-item";
+import { useSettings } from "@/components/settings-provider";
 
 const MetadataPreviewItem = forwardRef<
   HTMLDivElement,
   { item: Plex.Metadata | Plex.HubMetadata }
 >(({ item }, ref) => {
+  const { t } = useSettings();
   const { isSeason, isShow, isMovie, isEpisode, quality, open } =
     useHubItem(item);
 
@@ -22,7 +24,9 @@ const MetadataPreviewItem = forwardRef<
                 <span className="uppercase">
                   {isSeason && `s${item.index}`}
                   {isEpisode && `s${item.parentIndex} e${item.index}`}
-                  {isShow && `seasons ${item.childCount}`} -&nbsp;
+                  {isShow &&
+                    `${t("common.seasons")} ${item.childCount}`}{" "}
+                  -&nbsp;
                 </span>
               )}
               {item.title}

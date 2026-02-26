@@ -46,6 +46,7 @@ import {
   fetchMovieArtwork,
   fetchTvShowArtwork,
 } from "@/lib/fanart";
+import { useSettings } from "@/components/settings-provider";
 
 function plexImage(path: string | undefined, width?: number, height?: number): string {
   if (!path) return '';
@@ -73,6 +74,7 @@ export const MetaScreenYaflix: FC = () => {
   const searchParams = useSearchParams();
   const queryClient = useQueryClient();
   const { user } = useSession();
+  const { t } = useSettings();
   const mid = searchParams.get("mid");
   const { close } = useContext(CarouselContext);
   const [activeTab, setActiveTab] = useState("general");
@@ -100,6 +102,12 @@ export const MetaScreenYaflix: FC = () => {
     art: [],
     thumb: [],
   });
+
+  const localizeSeasonTitle = (title: string) => {
+    const match = title.match(/^season\s+(\d+)$/i);
+    if (!match) return title;
+    return `${t("common.season")} ${match[1]}`;
+  };
   const [metadataForm, setMetadataForm] = useState({
     title: "",
     titleSort: "",
@@ -859,10 +867,10 @@ export const MetaScreenYaflix: FC = () => {
     <Dialog open={!!mid} onOpenChange={handleClose}>
       <DialogContent className="max-w-full max-h-[100vh] h-full w-full p-0 border-none bg-black overflow-y-auto overflow-x-hidden">
         <DialogTitle className="sr-only">
-          {metadata?.title || "Loading..."}
+          {metadata?.title || t("metaDialog.loading")}
         </DialogTitle>
         <DialogDescription className="sr-only">
-          Detalles completos de la serie o película seleccionada
+          {t("metaDialog.fullDetailsDescription")}
         </DialogDescription>
 
         {/* Background — direct child of scroll container so sticky works */}
@@ -887,19 +895,19 @@ export const MetaScreenYaflix: FC = () => {
                 className="backdrop-blur-lg bg-white/10 border border-white/20 rounded-full px-6 py-2 text-white/90 hover:text-white hover:bg-white/20 font-semibold text-sm transition-all duration-200 shadow-lg"
                 href="/"
               >
-                Home
+                {t("libraryScreen.home")}
               </a>
               <a
                 className="backdrop-blur-lg bg-white/10 border border-white/20 rounded-full px-6 py-2 text-white/90 hover:text-white hover:bg-white/20 font-semibold text-sm transition-all duration-200 shadow-lg"
                 href="/browse/2"
               >
-                Películas
+                {t("libraryScreen.movies")}
               </a>
               <a
                 className="backdrop-blur-lg bg-white/10 border border-white/20 rounded-full px-6 py-2 text-white/90 hover:text-white hover:bg-white/20 font-semibold text-sm transition-all duration-200 shadow-lg"
                 href="/browse/1"
               >
-                Anime
+                {t("libraryScreen.anime")}
               </a>
             </nav>
             
@@ -913,7 +921,7 @@ export const MetaScreenYaflix: FC = () => {
             </button>
             
             {/* Close Button */}
-            <button onClick={handleClose} className="backdrop-blur-lg bg-white/10 border border-white/20 rounded-full p-2 text-white hover:bg-white/20 hover:text-white transition-all duration-200 shadow-lg" title="Cerrar">
+            <button onClick={handleClose} className="backdrop-blur-lg bg-white/10 border border-white/20 rounded-full p-2 text-white hover:bg-white/20 hover:text-white transition-all duration-200 shadow-lg" title={t("libraryScreen.close")}>
               <X className="w-5 h-5" />
             </button>
           </div>
@@ -1008,7 +1016,7 @@ export const MetaScreenYaflix: FC = () => {
                       {audioOptions.length > 0 && (
                         <div className="flex flex-col gap-1.5">
                           <label className="text-white/70 text-xs sm:text-sm font-medium">
-                            Audio
+                            {t("metaYaflix.audioLabel")}
                           </label>
                           <Select
                             value={selectedAudioStream || undefined}
@@ -1017,7 +1025,7 @@ export const MetaScreenYaflix: FC = () => {
                             }}
                           >
                             <SelectTrigger className="w-[180px] sm:w-[220px] glass-dark border-white/20 text-white">
-                              <SelectValue placeholder="Seleccionar audio" />
+                              <SelectValue placeholder={t("watch.selectAudio")} />
                             </SelectTrigger>
                             <SelectContent className="bg-black/95 border-white/20">
                               {audioOptions.map((option) => (
@@ -1038,7 +1046,7 @@ export const MetaScreenYaflix: FC = () => {
                       {subtitleOptions.length > 0 && (
                         <div className="flex flex-col gap-1.5">
                           <label className="text-white/70 text-xs sm:text-sm font-medium">
-                            Subtítulos
+                            {t("metaYaflix.subtitlesLabel")}
                           </label>
                           <Select
                             value={selectedSubtitleStream || "0"}
@@ -1047,11 +1055,13 @@ export const MetaScreenYaflix: FC = () => {
                             }}
                           >
                             <SelectTrigger className="w-[180px] sm:w-[220px] glass-dark border-white/20 text-white">
-                              <SelectValue placeholder="Seleccionar subtítulos" />
+                              <SelectValue
+                                placeholder={t("metaYaflix.selectSubtitlesPlaceholder")}
+                              />
                             </SelectTrigger>
                             <SelectContent className="bg-black/95 border-white/20">
                               <SelectItem value="0" className="text-white hover:bg-white/10">
-                                Sin subtítulos
+                                {t("metaYaflix.noSubtitles")}
                               </SelectItem>
                               {subtitleOptions.map((option) => (
                                 <SelectItem
@@ -1077,7 +1087,7 @@ export const MetaScreenYaflix: FC = () => {
                       className="gap-2 sm:gap-2.5 text-base sm:text-lg py-2.5 sm:py-3.5 px-6 sm:px-8 bg-white text-black hover:bg-white/90 transition-all duration-200 font-bold rounded-md shadow-lg"
                     >
                       <Play className="w-5 h-5 sm:w-6 sm:h-6" fill="currentColor" />
-                      <span>Reproducir</span>
+                      <span>{t("metaYaflix.play")}</span>
                     </Button>
                     {(nextEpisodeInfo || info.playable) && (
                       <span className="text-white/70 text-xs sm:text-sm font-medium">
@@ -1089,7 +1099,11 @@ export const MetaScreenYaflix: FC = () => {
                     <Button
                       onClick={handleToggleWatched}
                       className="w-10 h-10 sm:w-11 sm:h-11 rounded-full flex items-center justify-center transition-colors border bg-plex hover:bg-plex/80 border-plex"
-                      title={info.watched ? "Marcar como no visto" : "Marcar como visto"}
+                      title={
+                        info.watched
+                          ? t("metaYaflix.markAsUnwatched")
+                          : t("metaYaflix.markAsWatched")
+                      }
                     >
                       {info.watched ? (
                         <Check className="w-4 h-4 sm:w-5 sm:h-5 text-white" strokeWidth={2.5} />
@@ -1119,7 +1133,7 @@ export const MetaScreenYaflix: FC = () => {
                         }}
                         className="text-white border-white/40 bg-black/30 hover:bg-white/15 hover:text-white"
                       >
-                        Editar metadatos
+                        {t("metaYaflix.editMetadata")}
                       </Button>
                     )}
                   </div>
@@ -1137,7 +1151,7 @@ export const MetaScreenYaflix: FC = () => {
                     activeTab === "general" ? "text-white" : "text-white/80 hover:text-white"
                   )}
                 >
-                  General
+                  {t("metaYaflix.general")}
                   {activeTab === "general" && (
                     <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-plex" />
                   )}
@@ -1150,7 +1164,7 @@ export const MetaScreenYaflix: FC = () => {
                       activeTab === "episodes" ? "text-white" : "text-white/80 hover:text-white"
                     )}
                   >
-                    Todos los episodios
+                    {t("metaYaflix.allEpisodes")}
                     {activeTab === "episodes" && (
                       <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-plex" />
                     )}
@@ -1165,7 +1179,7 @@ export const MetaScreenYaflix: FC = () => {
                     }}
                     className="glass-pill rounded-full px-4 py-2 text-sm font-semibold text-white/90 hover:text-white hover:bg-white/15 transition-all duration-200"
                   >
-                    Más episodios
+                    {t("metaYaflix.moreEpisodes")}
                   </button>
                 )}
               </div>
@@ -1177,16 +1191,20 @@ export const MetaScreenYaflix: FC = () => {
               {activeTab === "general" && (
                 <>
                   <div className="rounded-xl sm:rounded-2xl p-4 sm:p-6 backdrop-blur-lg bg-white/10 border border-white/20 shadow-xl">
-                    <h2 className="text-xl sm:text-2xl font-bold text-white mb-3 sm:mb-4">Sinopsis</h2>
+                    <h2 className="text-xl sm:text-2xl font-bold text-white mb-3 sm:mb-4">
+                      {t("metaYaflix.synopsis")}
+                    </h2>
                     <p className="text-white/80 leading-relaxed text-base sm:text-lg max-w-4xl">
-                      {metadata?.summary || "No description available."}
+                      {metadata?.summary || t("metaYaflix.noDescription")}
                     </p>
                   </div>
 
                   {/* Cast */}
                   {metadata?.Role && metadata.Role.length > 0 && (
                     <div>
-                      <h2 className="text-xl sm:text-2xl font-bold text-white mb-4 sm:mb-6">Reparto</h2>
+                      <h2 className="text-xl sm:text-2xl font-bold text-white mb-4 sm:mb-6">
+                        {t("metaYaflix.cast")}
+                      </h2>
                       <div className="flex gap-3 sm:gap-4 pb-4 overflow-x-auto no-scrollbar">
                         {metadata.Role.slice(0, 10).map((role) => (
                           <div key={role.id} className="flex-shrink-0 text-center" style={{ width: '120px' }}>
@@ -1234,7 +1252,7 @@ export const MetaScreenYaflix: FC = () => {
                                 : "bg-white/5 text-white/60 hover:bg-white/10 hover:text-white border border-white/10"
                             )}
                           >
-                            {s.title}
+                            {localizeSeasonTitle(s.title)}
                           </button>
                         ))}
                       </div>
@@ -1298,7 +1316,7 @@ export const MetaScreenYaflix: FC = () => {
 
                                       {episode.index === 1 && (
                                         <div className="absolute top-2 left-2 px-2 py-1 rounded bg-plex text-white text-xs font-bold">
-                                          Siguiente
+                                          {t("metaYaflix.next")}
                                         </div>
                                       )}
 
@@ -1312,10 +1330,12 @@ export const MetaScreenYaflix: FC = () => {
                                     <div className="p-4">
                                       <div className="flex items-center gap-2 mb-1">
                                         <p className="text-plex text-sm font-semibold">
-                                          Episodio {episode.index}
+                                          {t("metaYaflix.episode")} {episode.index}
                                         </p>
                                         {episode.viewCount && episode.viewCount > 0 && (
-                                          <span className="text-white/40 text-xs">• Visto</span>
+                                          <span className="text-white/40 text-xs">
+                                            • {t("metaYaflix.watched")}
+                                          </span>
                                         )}
                                       </div>
                                       <h3 className="text-white font-bold text-lg mb-2 line-clamp-1">
@@ -1357,7 +1377,7 @@ export const MetaScreenYaflix: FC = () => {
                               : "bg-white/5 text-white/60 hover:bg-white/10 hover:text-white border border-white/10"
                           )}
                         >
-                          {s.title}
+                          {localizeSeasonTitle(s.title)}
                         </button>
                       ))}
                     </div>
@@ -1403,7 +1423,7 @@ export const MetaScreenYaflix: FC = () => {
                           <div className="flex-1 py-3 pr-4">
                             <div className="flex items-center gap-2 mb-1">
                               <span className="text-plex text-sm font-semibold">
-                                Episodio {episode.index}
+                                {t("metaYaflix.episode")} {episode.index}
                               </span>
                               {episode.duration && (
                                 <span className="text-white/40 text-xs">
@@ -1411,7 +1431,9 @@ export const MetaScreenYaflix: FC = () => {
                                 </span>
                               )}
                               {episode.viewCount && episode.viewCount > 0 && (
-                                <span className="text-white/40 text-xs">• Visto</span>
+                                <span className="text-white/40 text-xs">
+                                  • {t("metaYaflix.watched")}
+                                </span>
                               )}
                             </div>
                             <h3 className="text-white font-bold text-base mb-1 line-clamp-1">
@@ -1433,7 +1455,7 @@ export const MetaScreenYaflix: FC = () => {
                 <div>
                   <div className="flex items-center justify-between mb-4 sm:mb-5 px-1">
                     <h2 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
-                      También puede que te guste
+                      {t("metaYaflix.youMayAlsoLike")}
                     </h2>
                   </div>
                   <div className="relative group/carousel-scroll overflow-visible">
@@ -1476,13 +1498,17 @@ export const MetaScreenYaflix: FC = () => {
       </DialogContent>
       <Dialog open={isMetadataEditorOpen} onOpenChange={setMetadataEditorOpen}>
         <DialogContent className="max-w-2xl bg-zinc-950 border-white/15 text-white">
-          <DialogTitle>Editar metadatos</DialogTitle>
+          <DialogTitle>{t("metaYaflix.metadataDialogTitle")}</DialogTitle>
           <DialogDescription className="text-white/70">
-            Cambios para {metadata?.type ?? "contenido"}.
+            {t("metaYaflix.metadataDialogDescription", {
+              type: metadata?.type
+                ? t(`common.${metadata.type}`, undefined, metadata.type)
+                : t("metaYaflix.contentFallbackType"),
+            })}
           </DialogDescription>
           <form className="space-y-4" onSubmit={handleSaveMetadata}>
             <div className="space-y-2">
-              <label className="text-sm text-white/80">Titulo</label>
+              <label className="text-sm text-white/80">{t("metaYaflix.title")}</label>
               <Input
                 value={metadataForm.title}
                 onChange={(e) =>
@@ -1494,7 +1520,7 @@ export const MetaScreenYaflix: FC = () => {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <label className="text-sm text-white/80">Titulo ordenado</label>
+                <label className="text-sm text-white/80">{t("metaYaflix.sortTitle")}</label>
                 <Input
                   value={metadataForm.titleSort}
                   onChange={(e) =>
@@ -1507,7 +1533,7 @@ export const MetaScreenYaflix: FC = () => {
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-sm text-white/80">Titulo original</label>
+                <label className="text-sm text-white/80">{t("metaYaflix.originalTitle")}</label>
                 <Input
                   value={metadataForm.originalTitle}
                   onChange={(e) =>
@@ -1522,7 +1548,7 @@ export const MetaScreenYaflix: FC = () => {
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm text-white/80">Resumen</label>
+              <label className="text-sm text-white/80">{t("metaYaflix.summary")}</label>
               <textarea
                 value={metadataForm.summary}
                 onChange={(e) =>
@@ -1535,7 +1561,7 @@ export const MetaScreenYaflix: FC = () => {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <label className="text-sm text-white/80">Tagline</label>
+                <label className="text-sm text-white/80">{t("metaYaflix.tagline")}</label>
                 <Input
                   value={metadataForm.tagline}
                   onChange={(e) =>
@@ -1545,7 +1571,7 @@ export const MetaScreenYaflix: FC = () => {
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-sm text-white/80">Estudio</label>
+                <label className="text-sm text-white/80">{t("metaYaflix.studio")}</label>
                 <Input
                   value={metadataForm.studio}
                   onChange={(e) =>
@@ -1558,7 +1584,7 @@ export const MetaScreenYaflix: FC = () => {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <label className="text-sm text-white/80">Clasificacion</label>
+                <label className="text-sm text-white/80">{t("metaYaflix.rating")}</label>
                 <Input
                   value={metadataForm.contentRating}
                   onChange={(e) =>
@@ -1571,7 +1597,7 @@ export const MetaScreenYaflix: FC = () => {
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-sm text-white/80">Ano</label>
+                <label className="text-sm text-white/80">{t("metaYaflix.year")}</label>
                 <Input
                   value={metadataForm.year}
                   onChange={(e) =>
@@ -1584,7 +1610,7 @@ export const MetaScreenYaflix: FC = () => {
 
             <div className="space-y-2">
               <label className="text-sm text-white/80">
-                Fecha estreno (YYYY-MM-DD)
+                {t("metaYaflix.releaseDate")}
               </label>
               <Input
                 value={metadataForm.originallyAvailableAt}
@@ -1603,8 +1629,8 @@ export const MetaScreenYaflix: FC = () => {
                 <div className="space-y-2">
                   <label className="text-sm text-white/80">
                     {metadata?.type === "episode"
-                      ? "Numero de episodio"
-                      : "Numero de temporada"}
+                      ? t("metaYaflix.episodeNumber")
+                      : t("metaYaflix.seasonNumber")}
                   </label>
                   <Input
                     value={metadataForm.index}
@@ -1617,7 +1643,7 @@ export const MetaScreenYaflix: FC = () => {
                 {metadata?.type === "episode" && (
                   <div className="space-y-2">
                     <label className="text-sm text-white/80">
-                      Numero de temporada
+                      {t("metaYaflix.seasonNumber")}
                     </label>
                     <Input
                       value={metadataForm.parentIndex}
@@ -1648,7 +1674,7 @@ export const MetaScreenYaflix: FC = () => {
                   setImageEditorOpen(true);
                 }}
               >
-                Gestionar imagenes
+                {t("metaYaflix.manageImages")}
               </Button>
               <Button
                 type="button"
@@ -1657,14 +1683,14 @@ export const MetaScreenYaflix: FC = () => {
                 onClick={() => setMetadataEditorOpen(false)}
                 disabled={savingMetadata}
               >
-                Cancelar
+                {t("metaYaflix.cancel")}
               </Button>
               <Button
                 type="submit"
                 className="bg-plex hover:bg-plex/80 text-white"
                 disabled={savingMetadata}
               >
-                {savingMetadata ? "Guardando..." : "Guardar cambios"}
+                {savingMetadata ? t("metaYaflix.saving") : t("metaYaflix.saveChanges")}
               </Button>
             </div>
           </form>
@@ -1672,19 +1698,19 @@ export const MetaScreenYaflix: FC = () => {
       </Dialog>
       <Dialog open={isImageEditorOpen} onOpenChange={setImageEditorOpen}>
         <DialogContent className="max-w-3xl bg-zinc-950 border-white/15 text-white">
-          <DialogTitle>Gestionar imagenes</DialogTitle>
+          <DialogTitle>{t("metaYaflix.imageDialogTitle")}</DialogTitle>
           <DialogDescription className="text-white/70">
             Cambia poster, fondo y miniatura.
           </DialogDescription>
           <form className="space-y-4" onSubmit={handleSaveImages}>
             <div className="space-y-3 rounded-md border border-white/15 p-3 bg-black/20">
-              <p className="text-sm font-medium text-white/90">URLs de imagen</p>
+              <p className="text-sm font-medium text-white/90">{t("metaYaflix.imageUrls")}</p>
               <p className="text-xs text-white/60">
                 Pega URLs publicas. Plex descargara y aplicara las imagenes.
               </p>
               <div className="grid grid-cols-1 gap-3">
                 <div className="space-y-2">
-                  <label className="text-sm text-white/80">Poster URL</label>
+                  <label className="text-sm text-white/80">{t("metaYaflix.posterUrl")}</label>
                   <Input
                     value={metadataForm.posterUrl}
                     onChange={(e) =>
@@ -1698,7 +1724,7 @@ export const MetaScreenYaflix: FC = () => {
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm text-white/80">Fondo URL</label>
+                  <label className="text-sm text-white/80">{t("metaYaflix.artUrl")}</label>
                   <Input
                     value={metadataForm.artUrl}
                     onChange={(e) =>
@@ -1712,7 +1738,7 @@ export const MetaScreenYaflix: FC = () => {
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm text-white/80">Miniatura URL</label>
+                  <label className="text-sm text-white/80">{t("metaYaflix.thumbUrl")}</label>
                   <Input
                     value={metadataForm.thumbUrl}
                     onChange={(e) =>
@@ -1728,10 +1754,10 @@ export const MetaScreenYaflix: FC = () => {
               </div>
               <div className="pt-2 border-t border-white/10">
                 <p className="text-xs text-white/70 mb-2">
-                  Sugerencias automáticas (como Plex):
+                  {t("metaYaflix.autoSuggestions")}
                 </p>
                 {loadingImageSuggestions ? (
-                  <p className="text-xs text-white/50">Buscando imágenes...</p>
+                  <p className="text-xs text-white/50">{t("metaYaflix.searchingImages")}</p>
                 ) : (
                   <div className="space-y-3">
                     <SuggestionStrip
@@ -1772,14 +1798,14 @@ export const MetaScreenYaflix: FC = () => {
                 onClick={() => setImageEditorOpen(false)}
                 disabled={savingImages}
               >
-                Cancelar
+                {t("metaYaflix.cancel")}
               </Button>
               <Button
                 type="submit"
                 className="bg-plex hover:bg-plex/80 text-white"
                 disabled={savingImages}
               >
-                {savingImages ? "Guardando..." : "Guardar imagenes"}
+                {savingImages ? t("metaYaflix.saving") : t("metaYaflix.saveImages")}
               </Button>
             </div>
           </form>
@@ -1820,3 +1846,6 @@ const SuggestionStrip: FC<{
     </div>
   );
 };
+
+
+

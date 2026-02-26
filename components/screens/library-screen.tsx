@@ -7,6 +7,7 @@ import { getPosterImage, getCoverImage } from "@/hooks/use-hub-item";
 import { motion } from "framer-motion";
 import qs from "qs";
 import { useSession } from "@/hooks/use-session";
+import { useSettings } from "@/components/settings-provider";
 
 const canEditType = (type: Plex.LibraryType) => {
   return (
@@ -36,6 +37,7 @@ export const LibraryScreen: FC<{
   const router = useRouter();
   const pathname = usePathname();
   const { user } = useSession();
+  const { t } = useSettings();
   const isAdmin = isAdminUser(user);
   const { loading, metadata, lastRef } = useItemKeyMetadata(
     key,
@@ -62,8 +64,12 @@ export const LibraryScreen: FC<{
       }}
     >
       <DialogContent className="max-w-full max-h-[100vh] h-full w-full p-0 border-none bg-black overflow-y-auto overflow-x-hidden">
-        <DialogTitle className="sr-only">{title || "Library"}</DialogTitle>
-        <DialogDescription className="sr-only">Browse library items</DialogDescription>
+        <DialogTitle className="sr-only">
+          {title || t("libraryScreen.libraryFallbackTitle")}
+        </DialogTitle>
+        <DialogDescription className="sr-only">
+          {t("libraryScreen.browseItems")}
+        </DialogDescription>
 
         {/* Background — blurred gradient */}
         <div className="sticky top-0 h-screen w-full -mb-[100vh] z-0 pointer-events-none overflow-hidden">
@@ -78,24 +84,24 @@ export const LibraryScreen: FC<{
               href="/"
               className="backdrop-blur-lg bg-white/10 border border-white/20 rounded-full px-6 py-2 text-white/90 hover:text-white hover:bg-white/20 font-semibold text-sm transition-all duration-200 shadow-lg"
             >
-              Home
+              {t("libraryScreen.home")}
             </a>
             <a
               href="/browse/2"
               className="backdrop-blur-lg bg-white/10 border border-white/20 rounded-full px-6 py-2 text-white/90 hover:text-white hover:bg-white/20 font-semibold text-sm transition-all duration-200 shadow-lg"
             >
-              Películas
+              {t("libraryScreen.movies")}
             </a>
             <a
               href="/browse/1"
               className="backdrop-blur-lg bg-white/10 border border-white/20 rounded-full px-6 py-2 text-white/90 hover:text-white hover:bg-white/20 font-semibold text-sm transition-all duration-200 shadow-lg"
             >
-              Anime
+              {t("libraryScreen.anime")}
             </a>
             <button 
               onClick={handleClose} 
               className="backdrop-blur-lg bg-white/10 border border-white/20 rounded-full p-2 text-white hover:bg-white/20 hover:text-white transition-all duration-200 shadow-lg" 
-              title="Cerrar"
+              title={t("libraryScreen.close")}
             >
               <X className="w-5 h-5" />
             </button>
@@ -117,7 +123,10 @@ export const LibraryScreen: FC<{
                   </h1>
                 )}
                 <p className="text-white/70 text-lg sm:text-xl">
-                  {filteredMetadata.length} {filteredMetadata.length === 1 ? 'item' : 'items'}
+                  {filteredMetadata.length}{" "}
+                  {filteredMetadata.length === 1
+                    ? t("libraryScreen.item")
+                    : t("libraryScreen.items")}
                 </p>
               </motion.div>
             </div>
@@ -129,7 +138,7 @@ export const LibraryScreen: FC<{
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/50" />
               <input
                 type="text"
-                placeholder="Buscar en la biblioteca..."
+                placeholder={t("libraryScreen.searchPlaceholder")}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pl-12 pr-10 py-3 backdrop-blur-lg bg-white/10 border border-white/20 rounded-full text-white placeholder-white/40 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-white/30 focus:bg-white/15 transition-all duration-200 shadow-lg"
@@ -214,7 +223,7 @@ export const LibraryScreen: FC<{
                             );
                           }}
                           className="absolute top-2 left-2 z-20 w-7 h-7 rounded-full bg-black/70 hover:bg-black/90 flex items-center justify-center transition-all opacity-0 group-hover:opacity-100 backdrop-blur-sm"
-                          title="Editar metadatos"
+                          title={t("libraryScreen.editMetadata")}
                         >
                           <Pencil className="w-3.5 h-3.5 text-white" />
                         </button>
@@ -248,7 +257,11 @@ export const LibraryScreen: FC<{
                       <p className="text-white font-semibold text-sm line-clamp-2">{item.title}</p>
                       <div className="flex items-center gap-2 mt-0.5 text-white/50 text-xs">
                         {item.year && <span>{item.year}</span>}
-                        {isCollection && item.childCount && <span>{item.childCount} items</span>}
+                        {isCollection && item.childCount && (
+                          <span>
+                            {item.childCount} {t("libraryScreen.items")}
+                          </span>
+                        )}
                         {item.contentRating && (
                           <span className="px-1.5 py-0.5 border border-white/20 rounded text-[10px]">{item.contentRating}</span>
                         )}
@@ -263,7 +276,7 @@ export const LibraryScreen: FC<{
             {loading && metadata.length > 0 && (
               <div className="mt-8 flex justify-center">
                 <div className="backdrop-blur-lg bg-white/10 border border-white/20 rounded-full px-6 py-3 text-white/80 text-sm font-medium shadow-lg">
-                  Cargando más...
+                  {t("libraryScreen.loadingMore")}
                 </div>
               </div>
             )}

@@ -24,6 +24,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import qs from "qs";
 import { usePathname, useRouter } from "next/navigation";
 import { ServerApi } from "@/api";
+import { useSettings } from "@/components/settings-provider";
 
 const Context = createContext(
   {} as {
@@ -39,6 +40,7 @@ export function SearchProvider({ children }: { children: ReactNode }) {
   const [domLoaded, setDomLoaded] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
+  const { t } = useSettings();
 
   const handleReset = () => {
     setResults([]);
@@ -108,13 +110,13 @@ export function SearchProvider({ children }: { children: ReactNode }) {
       {children}
       <Dialog open={open} onOpenChange={handleOpen}>
         <DialogContent className="overflow-hidden p-0" aria-describedby={undefined}>
-          <DialogTitle className="sr-only">Search dialog</DialogTitle>
+          <DialogTitle className="sr-only">{t("search.dialogTitle")}</DialogTitle>
           <Command className="[&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-muted-foreground [&_[cmdk-group]:not([hidden])_~[cmdk-group]]:pt-0 [&_[cmdk-group]]:px-2 [&_[cmdk-input-wrapper]_svg]:h-5 [&_[cmdk-input-wrapper]_svg]:w-5 [&_[cmdk-input]]:h-12 [&_[cmdk-item]]:px-2 [&_[cmdk-item]]:py-3 [&_[cmdk-item]_svg]:h-5 [&_[cmdk-item]_svg]:w-5">
             <div className="flex flex-row items-center px-3 border-b">
               <SearchIcon className="mr-2 h-4 w-4 shrink-0 opacity-50" />
               <input
                 className="flex h-10 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
-                placeholder="Search..."
+                placeholder={t("search.placeholder")}
                 onChange={({ target: { value } }) => handleSearch(value)}
                 value={query}
               />
@@ -164,7 +166,7 @@ export function SearchProvider({ children }: { children: ReactNode }) {
                                 "X-Plex-Token": token,
                               },
                             )}`}
-                            alt="search result poster"
+                            alt={t("search.resultPosterAlt")}
                             className="w-[60px] h-[90px] rounded"
                           />
                           <div className="max-w-max overflow-hidden">
@@ -186,11 +188,12 @@ export function SearchProvider({ children }: { children: ReactNode }) {
                                       .padStart(2, "0")}
                                     {" • "}
                                     {item.index.toString().padStart(2, "0")}
-                                    {" • "}Episode
+                                    {" • "}
+                                    {t("search.episodeLabel")}
                                   </p>
                                 ) : (
                                   <p className="truncate font-bold text-sm text-muted-foreground">
-                                    episode
+                                    {t("search.episodeLabelLower")}
                                   </p>
                                 )}
                               </>
@@ -206,7 +209,7 @@ export function SearchProvider({ children }: { children: ReactNode }) {
                     ))
                   ) : (
                     <CommandEmpty className="py-6 px-2 text-center text-sm">
-                      No results found.
+                      {t("search.noResults")}
                     </CommandEmpty>
                   )}
                 </div>

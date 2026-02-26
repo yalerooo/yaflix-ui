@@ -36,6 +36,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useSettings } from "@/components/settings-provider";
 
 export const MetaScreen: FC = () => {
   const pathname = usePathname();
@@ -43,6 +44,7 @@ export const MetaScreen: FC = () => {
   const searchParams = useSearchParams();
   const mid = searchParams.get("mid");
   const { close } = useContext(CarouselContext);
+  const { t } = useSettings();
   const [episodeIndexCharCount, setEpisodeIndexCharCount] = useState(1);
   const [tab, setTab] = useState("");
   const { muted, toggleMuted } = usePreviewMuted();
@@ -207,7 +209,7 @@ export const MetaScreen: FC = () => {
     >
       <DialogContent className="w-full p-0 max-w-[min(1500px,calc(100%-2rem))] h-full max-h-[calc(100%-2rem)] overflow-hidden z-[50]">
         <VisuallyHidden>
-          <DialogTitle>Item metadata dialog</DialogTitle>
+          <DialogTitle>{t("meta.itemMetadataDialog")}</DialogTitle>
         </VisuallyHidden>
         <ScrollArea>
           <div className="max-w-full w-full rounded-lg h-full overflow-auto relative">
@@ -337,20 +339,26 @@ export const MetaScreen: FC = () => {
                       {info.isShow && (
                         <p className="font-bold text-muted-foreground max-w-4xl line-clamp-3 flex flex-row items-center gap-4">
                           <span>
-                            {info.childCount} Season
-                            {(info.childCount ?? 0) > 1 ? "s" : ""}
+                            {info.childCount}{" "}
+                            {(info.childCount ?? 0) > 1
+                              ? t("meta.seasons")
+                              : t("meta.season")}
                           </span>
                           <span>
-                            {info.leafCount} Episode
-                            {(info.leafCount ?? 0) > 1 ? "s" : ""}
+                            {info.leafCount}{" "}
+                            {(info.leafCount ?? 0) > 1
+                              ? t("meta.episodes")
+                              : t("meta.episode")}
                           </span>
                         </p>
                       )}
                       {info.isSeason && (
                         <p className="font-bold text-muted-foreground max-w-4xl line-clamp-3 flex flex-row items-center gap-4">
                           <span>
-                            {info.leafCount} Episode
-                            {(info.leafCount ?? 0) > 1 ? "s" : ""}
+                            {info.leafCount}{" "}
+                            {(info.leafCount ?? 0) > 1
+                              ? t("meta.episodes")
+                              : t("meta.episode")}
                           </span>
                         </p>
                       )}
@@ -361,9 +369,11 @@ export const MetaScreen: FC = () => {
                             type="button"
                             className="hover:text-primary"
                           >
-                            Season {metadata?.parentIndex}
+                            {t("meta.season")} {metadata?.parentIndex}
                           </button>
-                          <span>Episode {metadata?.index}</span>
+                          <span>
+                            {t("meta.episode")} {metadata?.index}
+                          </span>
                         </p>
                       )}
                       {metadata?.contentRating && (
@@ -391,7 +401,7 @@ export const MetaScreen: FC = () => {
                           onClick={info.play}
                           className="w-fit font-bold"
                         >
-                          <Play fill="currentColor" /> Play
+                          <Play fill="currentColor" /> {t("meta.play")}
                           {info.playable
                             ? `${info.playable.season !== null ? ` S${info.playable.season}` : ""}${info.playable.episode !== null ? ` E${info.playable.episode}` : ""}`
                             : null}
@@ -428,12 +438,12 @@ export const MetaScreen: FC = () => {
                         <>
                           {metadata?.Genre && (
                             <InfoList
-                              title="Genre"
+                              title={t("meta.genre")}
                               infos={metadata.Genre.map((g) => g.tag)}
                             />
                           )}
-                          <InfoList title="Languages" infos={languages} />
-                          <InfoList title="Subtitles" infos={subtitles} />
+                          <InfoList title={t("meta.languages")} infos={languages} />
+                          <InfoList title={t("meta.subtitles")} infos={subtitles} />
                         </>
                       )}
                     </div>
@@ -456,14 +466,18 @@ export const MetaScreen: FC = () => {
                     <Tabs value={tab} onValueChange={(value) => setTab(value)}>
                       <TabsList>
                         {metadata.type === "show" && (
-                          <TabsTrigger value="seasons">SEASONS</TabsTrigger>
+                          <TabsTrigger value="seasons">
+                            {t("meta.tabs.seasons")}
+                          </TabsTrigger>
                         )}
                         {(metadata.type === "season" ||
                           metadata.type === "episode") && (
-                          <TabsTrigger value="episodes">EPISODES</TabsTrigger>
+                          <TabsTrigger value="episodes">
+                            {t("meta.tabs.episodes")}
+                          </TabsTrigger>
                         )}
                         <TabsTrigger value="related">
-                          MORE LIKE THIS
+                          {t("meta.tabs.moreLikeThis")}
                         </TabsTrigger>
                       </TabsList>
 
@@ -487,8 +501,10 @@ export const MetaScreen: FC = () => {
                             showChildren.length > 0 && (
                               <div className="space-y-6">
                                 <p className="font-bold text-lg md:text-2xl">
-                                  {showChildren.length} Season
-                                  {showChildren.length > 1 ? "s" : ""}
+                                  {showChildren.length}{" "}
+                                  {showChildren.length > 1
+                                    ? t("meta.seasons")
+                                    : t("meta.season")}
                                 </p>
                                 <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
                                   {showChildren.map((child) => (
@@ -532,8 +548,10 @@ export const MetaScreen: FC = () => {
                               <div className="space-y-6">
                                 <div className="flex justify-between">
                                   <p className="font-bold text-lg md:text-2xl">
-                                    {seasonChildren.length} Episode
-                                    {seasonChildren.length > 1 ? "s" : ""}
+                                    {seasonChildren.length}{" "}
+                                    {seasonChildren.length > 1
+                                      ? t("meta.episodes")
+                                      : t("meta.episode")}
                                   </p>
                                   {showChildren && showChildren.length > 1 && (
                                     <Select
@@ -601,8 +619,10 @@ export const MetaScreen: FC = () => {
                               <div className="space-y-6">
                                 <div className="flex justify-between">
                                   <p className="font-bold text-lg md:text-2xl">
-                                    {episodeChildren.length} Episode
-                                    {episodeChildren.length > 1 ? "s" : ""}
+                                    {episodeChildren.length}{" "}
+                                    {episodeChildren.length > 1
+                                      ? t("meta.episodes")
+                                      : t("meta.episode")}
                                   </p>
                                   {showChildren && showChildren.length > 1 && (
                                     <Select

@@ -61,12 +61,14 @@ import {
 } from "@/components/ui/popover";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { getCoverImage } from "@/hooks/use-hub-item";
+import { useSettings } from "@/components/settings-provider";
 
 export const WatchScreen: FC<{ watch: string | undefined }> = ({ watch }) => {
   const router = useRouter();
   const pathname = usePathname();
   const container = useRef<HTMLDivElement>(null);
   const searchParams = useSearchParams();
+  const { t } = useSettings();
   const [metadata, setMetadata] = useState<Plex.Metadata | null>(null);
   const [playQueue, setPlayQueue] = useState<Plex.Metadata[] | null>(null); // [current, ...next]
   const player = useRef<ReactPlayer | null>(null);
@@ -464,7 +466,7 @@ export const WatchScreen: FC<{ watch: string | undefined }> = ({ watch }) => {
   const videoOptions = useMemo(
     () =>
       metadata?.Media && metadata.Media.length > 0
-        ? getCurrentVideoLevels(metadata.Media[0].videoResolution).filter(
+        ? getCurrentVideoLevels(metadata.Media[0].videoResolution, t).filter(
             (opt) => opt.bitrate,
           )
         : [],
@@ -945,7 +947,7 @@ export const WatchScreen: FC<{ watch: string | undefined }> = ({ watch }) => {
                             "X-Plex-Token": token,
                           },
                         )}`}
-                        alt="preview poster"
+                        alt={t("watch.previewPosterAlt")}
                       />
                       <div className="p-4 text-white">
                         <p className="text-xl line-clamp-1 font-bold">
@@ -1018,11 +1020,11 @@ export const WatchScreen: FC<{ watch: string | undefined }> = ({ watch }) => {
                         >
                           <div className="flex items-center gap-3">
                             <Sparkles className="w-5 h-5 text-white/80" />
-                            <span className="text-white font-medium">Calidad</span>
+                            <span className="text-white font-medium">{t("watch.quality")}</span>
                           </div>
                           <div className="flex items-center gap-2">
                             <span className="text-white/60 text-sm">
-                              {videoOptions.find(opt => opt.bitrate?.toString() === quality.bitrate?.toString())?.extra || 'Automática'}
+                              {videoOptions.find(opt => opt.bitrate?.toString() === quality.bitrate?.toString())?.extra || t("watch.automatic")}
                             </span>
                             <ChevronRight className="w-5 h-5 text-white/60" />
                           </div>
@@ -1036,11 +1038,11 @@ export const WatchScreen: FC<{ watch: string | undefined }> = ({ watch }) => {
                         >
                           <div className="flex items-center gap-3">
                             <Music className="w-5 h-5 text-white/80" />
-                            <span className="text-white font-medium">Audio</span>
+                            <span className="text-white font-medium">{t("watch.audio")}</span>
                           </div>
                           <div className="flex items-center gap-2">
                             <span className="text-white/60 text-sm line-clamp-1 max-w-[140px]">
-                              {audioOptions.find(opt => opt.selected)?.displayTitle || 'Predeterminado'}
+                              {audioOptions.find(opt => opt.selected)?.displayTitle || t("watch.defaultAudio")}
                             </span>
                             <ChevronRight className="w-5 h-5 text-white/60" />
                           </div>
@@ -1054,11 +1056,11 @@ export const WatchScreen: FC<{ watch: string | undefined }> = ({ watch }) => {
                         >
                           <div className="flex items-center gap-3">
                             <Subtitles className="w-5 h-5 text-white/80" />
-                            <span className="text-white font-medium">Subtítulos</span>
+                            <span className="text-white font-medium">{t("watch.subtitles")}</span>
                           </div>
                           <div className="flex items-center gap-2">
                             <span className="text-white/60 text-sm line-clamp-1 max-w-[140px]">
-                              {subtitleOptions.find(opt => opt.selected)?.displayTitle || 'Desactivados'}
+                              {subtitleOptions.find(opt => opt.selected)?.displayTitle || t("watch.subtitlesOff")}
                             </span>
                             <ChevronRight className="w-5 h-5 text-white/60" />
                           </div>
@@ -1077,7 +1079,7 @@ export const WatchScreen: FC<{ watch: string | undefined }> = ({ watch }) => {
                         >
                           <ChevronLeft className="w-5 h-5 text-white" />
                         </button>
-                        <span className="text-white font-semibold">Calidad</span>
+                        <span className="text-white font-semibold">{t("watch.quality")}</span>
                       </div>
                       <div className="max-h-[400px] overflow-y-auto">
                         {videoOptions.map((option) => (
@@ -1138,7 +1140,7 @@ export const WatchScreen: FC<{ watch: string | undefined }> = ({ watch }) => {
                         >
                           <ChevronLeft className="w-5 h-5 text-white" />
                         </button>
-                        <span className="text-white font-semibold">Audio</span>
+                        <span className="text-white font-semibold">{t("watch.audio")}</span>
                       </div>
                       <div className="max-h-[400px] overflow-y-auto">
                         {audioOptions.map((option) => (
@@ -1190,7 +1192,7 @@ export const WatchScreen: FC<{ watch: string | undefined }> = ({ watch }) => {
                         >
                           <ChevronLeft className="w-5 h-5 text-white" />
                         </button>
-                        <span className="text-white font-semibold">Subtítulos</span>
+                        <span className="text-white font-semibold">{t("watch.subtitles")}</span>
                       </div>
                       <div className="max-h-[400px] overflow-y-auto">
                         <button
@@ -1220,7 +1222,7 @@ export const WatchScreen: FC<{ watch: string | undefined }> = ({ watch }) => {
                             !subtitleOptions.find(opt => opt.selected) ? 'bg-white/5' : ''
                           }`}
                         >
-                          <span className="text-white">Desactivados</span>
+                          <span className="text-white">{t("watch.subtitlesOff")}</span>
                           {!subtitleOptions.find(opt => opt.selected) && (
                             <div className="w-2 h-2 rounded-full bg-plex"></div>
                           )}
@@ -1300,7 +1302,7 @@ export const WatchScreen: FC<{ watch: string | undefined }> = ({ watch }) => {
                 <img
                   className="h-full object-cover blur-[3px]"
                   src={getCoverImage(metadata.art, true)}
-                  alt="Metadata art"
+                  alt={t("watch.metadataArtAlt")}
                 />
               </div>
               <div className="absolute inset-0 bg-background/80"></div>
@@ -1319,15 +1321,14 @@ export const WatchScreen: FC<{ watch: string | undefined }> = ({ watch }) => {
         }}
       >
         <DialogContent>
-          <DialogTitle>Loading Error</DialogTitle>
+          <DialogTitle>{t("watch.loadingErrorTitle")}</DialogTitle>
           <DialogDescription>
-            The video was not able to load. You may try to refresh the page to
-            resolve the error.
+            {t("watch.loadingErrorDescription")}
           </DialogDescription>
           <DialogFooter className="flex flex-row gap-2">
             <DialogClose asChild disabled={pendingRefresh}>
               <Button type="button" disabled={pendingRefresh}>
-                Close
+                {t("watch.close")}
               </Button>
             </DialogClose>
             <Button
@@ -1356,7 +1357,7 @@ export const WatchScreen: FC<{ watch: string | undefined }> = ({ watch }) => {
               {pendingRefresh ? (
                 <LoaderCircle className="animate-spin" />
               ) : (
-                "Refresh"
+                t("watch.refresh")
               )}
             </Button>
           </DialogFooter>
@@ -1367,7 +1368,13 @@ export const WatchScreen: FC<{ watch: string | undefined }> = ({ watch }) => {
   );
 };
 
-export function getCurrentVideoLevels(resolution: string) {
+type WatchTranslate = (
+  key: string,
+  params?: Record<string, string | number | undefined | null>,
+  fallback?: string,
+) => string;
+
+export function getCurrentVideoLevels(resolution: string, t?: WatchTranslate) {
   const levels: {
     title: string;
     bitrate?: number;
@@ -1375,74 +1382,60 @@ export function getCurrentVideoLevels(resolution: string) {
     original?: boolean;
   }[] = [];
 
+  const tr: WatchTranslate =
+    t ??
+    ((key, params) => {
+      if (key === "watch.convertTo") return `Convert to ${params?.resolution ?? ""}`;
+      if (key === "watch.qualityHigh") return `(High) ${params?.mbps ?? ""}Mbps`;
+      if (key === "watch.qualityMedium") return `(Medium) ${params?.mbps ?? ""}Mbps`;
+      if (key === "watch.qualityMbps") return `${params?.mbps ?? ""}Mbps`;
+      return key;
+    });
+
+  const mk = (
+    targetResolution: string,
+    bitrate: number,
+    label?: "high" | "medium",
+    mbps?: string,
+  ) => ({
+    title: tr("watch.convertTo", { resolution: targetResolution }),
+    bitrate,
+    extra:
+      label === "high"
+        ? tr("watch.qualityHigh", { mbps })
+        : label === "medium"
+          ? tr("watch.qualityMedium", { mbps })
+          : tr("watch.qualityMbps", { mbps }),
+  });
+
   switch (resolution) {
     case "720":
       levels.push(
         ...[
-          {
-            title: "Convert to 720p",
-            bitrate: 4000,
-            extra: "(High) 4Mbps",
-          },
-          {
-            title: "Convert to 720p",
-            bitrate: 3000,
-            extra: "(Medium) 3Mbps",
-          },
-          { title: "Convert to 720p", bitrate: 2000, extra: "2Mbps" },
-          { title: "Convert to 480p", bitrate: 1500, extra: "1.5Mbps" },
-          { title: "Convert to 360p", bitrate: 750, extra: "0.7Mbps" },
-          { title: "Convert to 240p", bitrate: 300, extra: "0.3Mbps" },
+          mk("720p", 4000, "high", "4"),
+          mk("720p", 3000, "medium", "3"),
+          mk("720p", 2000, undefined, "2"),
+          mk("480p", 1500, undefined, "1.5"),
+          mk("360p", 750, undefined, "0.7"),
+          mk("240p", 300, undefined, "0.3"),
         ],
       );
       break;
     case "4k":
       levels.push(
         ...[
-          {
-            title: "Convert to 4K",
-            bitrate: 40000,
-            extra: "(High) 40Mbps",
-          },
-          {
-            title: "Convert to 4K",
-            bitrate: 30000,
-            extra: "(Medium) 30Mbps",
-          },
-          {
-            title: "Convert to 4K",
-            bitrate: 20000,
-            extra: "20Mbps",
-          },
-          {
-            title: "Convert to 1080p",
-            bitrate: 20000,
-            extra: "(High) 20Mbps",
-          },
-          {
-            title: "Convert to 1080p",
-            bitrate: 12000,
-            extra: "(Medium) 12Mbps",
-          },
-          {
-            title: "Convert to 1080p",
-            bitrate: 10000,
-            extra: "10Mbps",
-          },
-          {
-            title: "Convert to 720p",
-            bitrate: 4000,
-            extra: "(High) 4Mbps",
-          },
-          {
-            title: "Convert to 720p",
-            bitrate: 3000,
-            extra: "(Medium) 3Mbps",
-          },
-          { title: "Convert to 720p", bitrate: 2000, extra: "2Mbps" },
-          { title: "Convert to 480p", bitrate: 1500, extra: "1.5Mbps" },
-          { title: "Convert to 360p", bitrate: 750, extra: "0.7Mbps" },
-          { title: "Convert to 240p", bitrate: 300, extra: "0.3Mbps" },
+          mk("4K", 40000, "high", "40"),
+          mk("4K", 30000, "medium", "30"),
+          mk("4K", 20000, undefined, "20"),
+          mk("1080p", 20000, "high", "20"),
+          mk("1080p", 12000, "medium", "12"),
+          mk("1080p", 10000, undefined, "10"),
+          mk("720p", 4000, "high", "4"),
+          mk("720p", 3000, "medium", "3"),
+          mk("720p", 2000, undefined, "2"),
+          mk("480p", 1500, undefined, "1.5"),
+          mk("360p", 750, undefined, "0.7"),
+          mk("240p", 300, undefined, "0.3"),
         ],
       );
       break;
@@ -1451,35 +1444,15 @@ export function getCurrentVideoLevels(resolution: string) {
     default:
       levels.push(
         ...[
-          {
-            title: "Convert to 1080p",
-            bitrate: 20000,
-            extra: "(High) 20Mbps",
-          },
-          {
-            title: "Convert to 1080p",
-            bitrate: 12000,
-            extra: "(Medium) 12Mbps",
-          },
-          {
-            title: "Convert to 1080p",
-            bitrate: 10000,
-            extra: "10Mbps",
-          },
-          {
-            title: "Convert to 720p",
-            bitrate: 4000,
-            extra: "(High) 4Mbps",
-          },
-          {
-            title: "Convert to 720p",
-            bitrate: 3000,
-            extra: "(Medium) 3Mbps",
-          },
-          { title: "Convert to 720p", bitrate: 2000, extra: "2Mbps" },
-          { title: "Convert to 480p", bitrate: 1500, extra: "1.5Mbps" },
-          { title: "Convert to 360p", bitrate: 750, extra: "0.7Mbps" },
-          { title: "Convert to 240p", bitrate: 300, extra: "0.3Mbps" },
+          mk("1080p", 20000, "high", "20"),
+          mk("1080p", 12000, "medium", "12"),
+          mk("1080p", 10000, undefined, "10"),
+          mk("720p", 4000, "high", "4"),
+          mk("720p", 3000, "medium", "3"),
+          mk("720p", 2000, undefined, "2"),
+          mk("480p", 1500, undefined, "1.5"),
+          mk("360p", 750, undefined, "0.7"),
+          mk("240p", 300, undefined, "0.3"),
         ],
       );
       break;

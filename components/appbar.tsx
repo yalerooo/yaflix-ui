@@ -45,6 +45,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import he from "he";
+import { useSettings } from "@/components/settings-provider";
 
 export const APPBAR_HEIGHT = "4.5rem";
 
@@ -53,6 +54,7 @@ export const Appbar = () => {
   const router = useRouter();
   const { user } = useSession();
   const { libraries, disabledLibraries } = useServer();
+  const { t } = useSettings();
 
   const isAtTop = useIsAtTop();
 
@@ -82,7 +84,7 @@ export const Appbar = () => {
                 path === "/" ? "text-white bg-white/20" : "text-white/90"
               )}
             >
-              Home
+              {t("appbar.home")}
             </Link>
             {libraries.map((section) =>
               !disabledLibraries[section.title] ? (
@@ -108,7 +110,7 @@ export const Appbar = () => {
                         className="justify-start font-semibold text-white/90 hover:text-white hover:bg-white/10 transition-all duration-200"
                         size="sm"
                       >
-                        Library
+                        {t("appbar.library")}
                       </Button>
                       <Button
                         onClick={() => router.push(`/browse/${section.key}`)}
@@ -116,7 +118,7 @@ export const Appbar = () => {
                         className="justify-start font-semibold text-white/90 hover:text-white hover:bg-white/10 transition-all duration-200"
                         size="sm"
                       >
-                        Browse
+                        {t("appbar.browse")}
                       </Button>
                     </div>
                   </PopoverContent>
@@ -150,7 +152,7 @@ export const Appbar = () => {
                   data-state={path === "/" ? "active" : "inactive"}
                 >
                   <House />
-                  Home
+                  {t("appbar.home")}
                 </Link>
               </Button>
               {libraries.map((section) =>
@@ -222,7 +224,7 @@ export const Appbar = () => {
                   variant="ghost"
                 >
                   <Link href="/settings">
-                    <SettingsIcon /> <span>Settings</span>
+                    <SettingsIcon /> <span>{t("appbar.settings")}</span>
                   </Link>
                 </Button>
                 {user && (
@@ -235,7 +237,7 @@ export const Appbar = () => {
                           type="button"
                           variant="ghost"
                         >
-                          <Server /> <span>Change Server</span>
+                          <Server /> <span>{t("appbar.changeServer")}</span>
                         </Button>
                       }
                     />
@@ -249,7 +251,7 @@ export const Appbar = () => {
                         window.location.reload();
                       }}
                     >
-                      <ChevronsLeftRightEllipsis /> <span>Change User</span>
+                      <ChevronsLeftRightEllipsis /> <span>{t("appbar.changeUser")}</span>
                     </Button>
                     <Button
                       className="justify-start px-2 font-bold text-white/90 hover:text-white hover:bg-white/10"
@@ -258,7 +260,7 @@ export const Appbar = () => {
                       variant="ghost"
                       onClick={handleLogout}
                     >
-                      <LogOut /> <span>Logout</span>
+                      <LogOut /> <span>{t("appbar.logout")}</span>
                     </Button>
                   </>
                 )}

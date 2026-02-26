@@ -11,7 +11,7 @@ import { useSettings } from "@/components/settings-provider";
 import { getContentLogo } from "@/lib/fanart";
 
 export const Hero: FC<{ item: Plex.Metadata }> = ({ item }) => {
-  const { disableClearLogo } = useSettings();
+  const { disableClearLogo, t } = useSettings();
   const metadata = useQuery({
     queryKey: ["metadata", item.ratingKey],
     queryFn: async () => {
@@ -59,7 +59,7 @@ export const Hero: FC<{ item: Plex.Metadata }> = ({ item }) => {
   return (
     <div className="w-full flex flex-col items-start justify-start relative">
       <div className="relative w-full">
-        <img className="w-full top-0" src={coverImage} alt="preview image" />
+        <img className="w-full top-0" src={coverImage} alt={t("hero.previewImageAlt")} />
         <div
           className="w-full h-full absolute top-0"
           style={{
@@ -148,7 +148,7 @@ export const Hero: FC<{ item: Plex.Metadata }> = ({ item }) => {
               }}
               className="mt-2 text-sm font-semibold text-white/70 hover:text-white transition-colors flex items-center gap-1"
             >
-              {isExpanded ? 'Leer menos' : 'Leer más'}
+              {isExpanded ? t("hero.readLess") : t("hero.readMore")}
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 width="16"
@@ -174,7 +174,7 @@ export const Hero: FC<{ item: Plex.Metadata }> = ({ item }) => {
               onClick={play}
               className="flex items-center gap-2.5 px-7 py-3 rounded-2xl bg-white text-black font-bold text-base hover:bg-white/90 hover:scale-[1.03] active:scale-[0.97] transition-all duration-200 shadow-lg shadow-white/20"
             >
-              <Play fill="currentColor" className="w-5 h-5" /> Play
+              <Play fill="currentColor" className="w-5 h-5" /> {t("hero.play")}
             </button>
           )}
           <button
@@ -182,7 +182,7 @@ export const Hero: FC<{ item: Plex.Metadata }> = ({ item }) => {
             onClick={() => open()}
             className="flex items-center gap-2.5 px-7 py-3 rounded-2xl glass-strong font-bold text-base text-white hover:bg-white/20 hover:scale-[1.03] active:scale-[0.97] transition-all duration-200 glass-glow"
           >
-            <Info className="w-5 h-5" /> More Info
+            <Info className="w-5 h-5" /> {t("hero.moreInfo")}
           </button>
         </div>
       </div>
