@@ -105,15 +105,99 @@ export const WatchScreen: FC<{ watch: string | undefined }> = ({ watch }) => {
   const [settingsView, setSettingsView] = useState<'main' | 'quality' | 'audio' | 'subtitles'>('main');
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [videoWidth, setVideoWidth] = useState<number>(0);
+  const controlsHideTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
+
+  const clearControlsTimer = useCallback(() => {
+    if (controlsHideTimeoutRef.current) {
+      clearTimeout(controlsHideTimeoutRef.current);
+      controlsHideTimeoutRef.current = null;
+    }
+  }, []);
+
+  const scheduleControlsHide = useCallback(() => {
+    clearControlsTimer();
+    controlsHideTimeoutRef.current = setTimeout(() => {
+      setShowControls(false);
+    }, 5000);
+  }, [clearControlsTimer]);
+
+  const revealControls = useCallback(() => {
+    setShowControls(true);
+    scheduleControlsHide();
+  }, [scheduleControlsHide]);
+
+  const toggleControlsVisibility = useCallback(() => {
+    setShowControls((prev) => {
+      const next = !prev;
+      if (next) {
+        scheduleControlsHide();
+      } else {
+        clearControlsTimer();
+      }
+      return next;
+    });
+  }, [clearControlsTimer, scheduleControlsHide]);
+
+  const lockLandscapeIfPossible = useCallback(async () => {
+    try {
+      const orientationApi = screen.orientation as ScreenOrientation & {
+        lock?: (orientation: string) => Promise<void>;
+      };
+      if ("orientation" in screen && typeof orientationApi.lock === "function") {
+        await orientationApi.lock("landscape");
+      }
+    } catch {
+      // Ignore unsupported/permission errors (common on desktop/iOS).
+    }
+  }, []);
+
+  const unlockOrientationIfPossible = useCallback(() => {
+    try {
+      const orientationApi = screen.orientation as ScreenOrientation & {
+        unlock?: () => void;
+      };
+      if (
+        "orientation" in screen &&
+        typeof orientationApi.unlock === "function"
+      ) {
+        orientationApi.unlock();
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  const toggleFullscreenPlayer = useCallback(async () => {
+    try {
+      if (!document.fullscreenElement) {
+        const target = container.current ?? document.documentElement;
+        if ("requestFullscreen" in target) {
+          await target.requestFullscreen();
+          await lockLandscapeIfPossible();
+        }
+      } else {
+        await document.exitFullscreen();
+        unlockOrientationIfPossible();
+      }
+    } catch (error) {
+      console.error("Fullscreen error:", error);
+    }
+  }, [lockLandscapeIfPossible, unlockOrientationIfPossible]);
 
   useEffect(() => {
     const handleFullscreenChange = () => {
       setIsFullscreen(!!document.fullscreenElement);
+      if (!document.fullscreenElement) {
+        unlockOrientationIfPossible();
+      }
     };
 
     document.addEventListener('fullscreenchange', handleFullscreenChange);
-    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
-  }, []);
+    return () =>
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
+  }, [unlockOrientationIfPossible]);
 
   useEffect(() => {
     const updateVideoWidth = () => {
@@ -244,27 +328,28 @@ export const WatchScreen: FC<{ watch: string | undefined }> = ({ watch }) => {
   };
 
   useEffect(() => {
-    let timeout: NodeJS.Timeout;
+    let timeout: NodeJS.Timeout | null = null;
     const move = () => {
-      clearTimeout(timeout);
-      setShowControls(true);
-      timeout = setTimeout(() => {
-        setShowControls(false);
-      }, 5000);
+      if (timeout) clearTimeout(timeout);
+      revealControls();
     };
 
     const exit = () => {
-      clearTimeout(timeout);
+      if (timeout) clearTimeout(timeout);
       setShowControls(false);
+      clearControlsTimer();
     };
 
     document.addEventListener("mouseleave", exit);
     document.addEventListener("mousemove", move);
+    document.addEventListener("touchstart", move, { passive: true });
     return () => {
       document.removeEventListener("mouseleave", exit);
       document.removeEventListener("mousemove", move);
+      document.removeEventListener("touchstart", move);
+      clearControlsTimer();
     };
-  }, []);
+  }, [clearControlsTimer, revealControls]);
 
   const timeline = (state: "playing" | "stopped" | "paused" | "buffering") => {
     if (player.current && watch) {
@@ -418,11 +503,7 @@ export const WatchScreen: FC<{ watch: string | undefined }> = ({ watch }) => {
         player.current.seekTo(player.current.getCurrentTime() + 0.04);
       }
       if (e.key === "f" && player.current) {
-        if (!document.fullscreenElement) {
-          document.documentElement.requestFullscreen().then();
-        } else {
-          document.exitFullscreen().then();
-        }
+        toggleFullscreenPlayer();
       }
       if (e.key === "m") {
         setIsMuted((prev) => {
@@ -439,7 +520,7 @@ export const WatchScreen: FC<{ watch: string | undefined }> = ({ watch }) => {
         timeline("stopped");
       }
     };
-  }, []);
+  }, [toggleFullscreenPlayer]);
 
   // Disable body scroll
   useEffect(() => {
@@ -530,17 +611,10 @@ export const WatchScreen: FC<{ watch: string | undefined }> = ({ watch }) => {
 
                 switch (e.detail) {
                   case 1:
-                    setPlaying((state) => {
-                      timeline(state ? "paused" : "playing");
-                      return !state;
-                    });
+                    toggleControlsVisibility();
                     break;
                   case 2:
-                    if (!document.fullscreenElement) {
-                      document.documentElement.requestFullscreen();
-                    } else {
-                      document.exitFullscreen();
-                    }
+                    toggleFullscreenPlayer();
                     break;
                   default:
                     break;
@@ -675,7 +749,7 @@ export const WatchScreen: FC<{ watch: string | undefined }> = ({ watch }) => {
             />
           </div>
           <div
-            className={`sticky top-0 w-full flex flex-row items-center gap-4 p-6 bg-background/80 ${showControls || !playing ? "" : "-translate-y-full"} transition`}
+            className={`sticky top-0 w-full flex flex-row items-center gap-2 sm:gap-4 p-3 sm:p-6 bg-background/80 ${showControls || !playing ? "" : "-translate-y-full"} transition`}
           >
             <button
               onClick={() => back()}
@@ -687,9 +761,9 @@ export const WatchScreen: FC<{ watch: string | undefined }> = ({ watch }) => {
                 }
               }}
             >
-              <ArrowLeft className="w-8 h-8 text-muted-foreground group-hover:scale-125 hover:text-primary transition duration-75" />
+              <ArrowLeft className="w-6 h-6 sm:w-8 sm:h-8 text-muted-foreground group-hover:scale-125 hover:text-primary transition duration-75" />
             </button>
-            <p className="font-semibold text-white select-none line-clamp-1 text-base">
+            <p className="font-semibold text-white select-none line-clamp-1 text-sm sm:text-base min-w-0">
               {metadata.type === "movie" && metadata.title}
               {metadata.type === "episode" && (
                 <span>
@@ -737,7 +811,7 @@ export const WatchScreen: FC<{ watch: string | undefined }> = ({ watch }) => {
           </div>
           <div className="flex-1" />
           <div
-            className={`flex flex-row p-6 justify-end z-50 ${showSkip ? "" : "hidden"} transition`}
+            className={`flex flex-row p-3 sm:p-6 justify-end z-50 ${showSkip ? "" : "hidden"} transition`}
             autoFocus
           >
             {showSkip && (
@@ -763,7 +837,7 @@ export const WatchScreen: FC<{ watch: string | undefined }> = ({ watch }) => {
             )}
           </div>
           <div
-            className={`flex flex-row p-6 justify-end z-50 ${showCredit ? "" : "hidden"} transition`}
+            className={`flex flex-row p-3 sm:p-6 justify-end z-50 ${showCredit ? "" : "hidden"} transition`}
             autoFocus
           >
             {showCredit && (
@@ -790,7 +864,7 @@ export const WatchScreen: FC<{ watch: string | undefined }> = ({ watch }) => {
             )}
           </div>
           <div
-            className={`sticky bottom-0 w-full px-2 ${showControls || !playing ? "" : "translate-y-full"} transition-all duration-300`}
+            className={`sticky bottom-0 w-full px-2 sm:px-3 ${showControls || !playing ? "" : "translate-y-full"} transition-all duration-300`}
           >
             <div 
               className={`mx-auto w-full transition-all duration-300`}
@@ -829,9 +903,9 @@ export const WatchScreen: FC<{ watch: string | undefined }> = ({ watch }) => {
             )}
             <div
               aria-label="controls"
-              className="flex flex-row gap-3 items-center pb-3 pt-2"
+              className="flex flex-wrap gap-2 sm:gap-3 items-center pb-3 pt-2"
             >
-              <div className="flex items-center gap-1 bg-black/60 backdrop-blur-sm rounded-full px-1.5 py-1.5">
+              <div className="flex items-center gap-1 bg-black/60 backdrop-blur-sm rounded-full px-1 py-1 sm:px-1.5 sm:py-1.5">
               <button
                 id="button-play"
                 className="without-ring hover:bg-white/15 rounded-full p-1.5 transition-all"
@@ -851,12 +925,12 @@ export const WatchScreen: FC<{ watch: string | undefined }> = ({ watch }) => {
               >
                 {playing ? (
                   <Pause
-                    className="w-7 h-7 text-white hover:scale-105 transition duration-150"
+                    className="w-6 h-6 sm:w-7 sm:h-7 text-white hover:scale-105 transition duration-150"
                     fill="currentColor"
                   />
                 ) : (
                   <Play
-                    className="w-7 h-7 text-white hover:scale-105 transition duration-150"
+                    className="w-6 h-6 sm:w-7 sm:h-7 text-white hover:scale-105 transition duration-150"
                     fill="currentColor"
                   />
                 )}
@@ -879,11 +953,11 @@ export const WatchScreen: FC<{ watch: string | undefined }> = ({ watch }) => {
                   }}
                 >
                   {volume === 0 || isMuted ? (
-                    <VolumeX className="w-6 h-6 text-white hover:scale-105 transition duration-150" />
+                    <VolumeX className="w-5 h-5 sm:w-6 sm:h-6 text-white hover:scale-105 transition duration-150" />
                   ) : volume < 45 ? (
-                    <Volume1 className="w-6 h-6 text-white hover:scale-105 transition duration-150" />
+                    <Volume1 className="w-5 h-5 sm:w-6 sm:h-6 text-white hover:scale-105 transition duration-150" />
                   ) : (
-                    <Volume2 className="w-6 h-6 text-white hover:scale-105 transition duration-150" />
+                    <Volume2 className="w-5 h-5 sm:w-6 sm:h-6 text-white hover:scale-105 transition duration-150" />
                   )}
                 </button>
                 <div className="overflow-visible w-0 group-hover:w-24 transition-all duration-200">
@@ -903,14 +977,14 @@ export const WatchScreen: FC<{ watch: string | undefined }> = ({ watch }) => {
                   />
                 </div>
               </div>
-              <div className="bg-black/60 backdrop-blur-sm rounded-full px-3 py-1.5">
-                <p className="text-white text-xs font-medium tabular-nums">
+              <div className="bg-black/60 backdrop-blur-sm rounded-full px-2 sm:px-3 py-1.5">
+                <p className="text-white text-[10px] sm:text-xs font-medium tabular-nums">
                   {getFormatedTime(progress)} / {getFormatedTime(player.current?.getDuration() ?? 0)}
                 </p>
               </div>
               </div>
               <div className="flex-1" />
-              <div className="flex items-center gap-1 bg-black/60 backdrop-blur-sm rounded-full px-1.5 py-1.5">
+              <div className="flex items-center gap-1 bg-black/60 backdrop-blur-sm rounded-full px-1 py-1 sm:px-1.5 sm:py-1.5 ml-auto">
               {next && (
                 <TooltipProvider delayDuration={100}>
                   <Tooltip>
@@ -924,7 +998,7 @@ export const WatchScreen: FC<{ watch: string | undefined }> = ({ watch }) => {
                         }}
                         onClick={() => handleNext()}
                       >
-                        <SkipForward className="w-6 h-6 text-white hover:scale-105 transition duration-150" />
+                        <SkipForward className="w-5 h-5 sm:w-6 sm:h-6 text-white hover:scale-105 transition duration-150" />
                       </button>
                     </TooltipTrigger>
                     <TooltipContent
@@ -984,7 +1058,7 @@ export const WatchScreen: FC<{ watch: string | undefined }> = ({ watch }) => {
                   }}
                   id="button-pip"
                 >
-                  <PictureInPicture className="w-6 h-6 text-white hover:scale-105 transition duration-150" />
+                  <PictureInPicture className="w-5 h-5 sm:w-6 sm:h-6 text-white hover:scale-105 transition duration-150" />
                 </button>
               )}
               <Popover open={settingsOpen} onOpenChange={(open) => {
@@ -1001,13 +1075,13 @@ export const WatchScreen: FC<{ watch: string | undefined }> = ({ watch }) => {
                     }}
                     id="button-settings"
                   >
-                    <Settings className="w-6 h-6 text-white hover:scale-105 transition duration-150" />
+                    <Settings className="w-5 h-5 sm:w-6 sm:h-6 text-white hover:scale-105 transition duration-150" />
                   </button>
                 </PopoverTrigger>
                 <PopoverContent 
                   side="top" 
                   align="end" 
-                  className="w-80 p-0 glass-dark backdrop-blur-xl border-white/20 rounded-2xl overflow-hidden"
+                  className="w-[calc(100vw-1rem)] sm:w-80 max-w-80 p-0 glass-dark backdrop-blur-xl border-white/20 rounded-2xl overflow-hidden"
                   sideOffset={30}
                 >
                   {/* Main Menu */}
@@ -1275,18 +1349,12 @@ export const WatchScreen: FC<{ watch: string | undefined }> = ({ watch }) => {
                   }
                 }}
                 id="button-fullscreen"
-                onClick={() => {
-                  if (!document.fullscreenElement) {
-                    document.documentElement.requestFullscreen().then();
-                  } else {
-                    document.exitFullscreen().then();
-                  }
-                }}
+              onClick={toggleFullscreenPlayer}
               >
                 {document.fullscreenElement ? (
-                  <Minimize className="w-6 h-6 text-white hover:scale-105 transition duration-150" />
+                  <Minimize className="w-5 h-5 sm:w-6 sm:h-6 text-white hover:scale-105 transition duration-150" />
                 ) : (
-                  <Maximize className="w-6 h-6 text-white hover:scale-105 transition duration-150" />
+                  <Maximize className="w-5 h-5 sm:w-6 sm:h-6 text-white hover:scale-105 transition duration-150" />
                 )}
               </button>
               </div>

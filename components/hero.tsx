@@ -57,9 +57,13 @@ export const Hero: FC<{ item: Plex.Metadata }> = ({ item }) => {
   const displayLogo = clearLogo || fanartLogo;
 
   return (
-    <div className="w-full flex flex-col items-start justify-start relative">
-      <div className="relative w-full">
-        <img className="w-full top-0" src={coverImage} alt={t("hero.previewImageAlt")} />
+    <div className="w-full flex flex-col items-start justify-start relative pb-4 md:pb-0">
+      <div className="relative w-full h-[42svh] min-h-[260px] max-h-[420px] md:h-auto md:min-h-0 md:max-h-none overflow-hidden">
+        <img
+          className="w-full h-full md:h-auto top-0 object-cover object-center"
+          src={coverImage}
+          alt={t("hero.previewImageAlt")}
+        />
         <div
           className="w-full h-full absolute top-0"
           style={{
@@ -76,21 +80,21 @@ export const Hero: FC<{ item: Plex.Metadata }> = ({ item }) => {
           }}
         />
       </div>
-      <div className="flex flex-col items-start justify-center mx-10 md:mx-20 gap-5 absolute -bottom-[10vw] md:bottom-0 lg:bottom-[10vw]">
+      <div className="relative z-20 -mt-14 sm:-mt-20 md:mt-0 md:absolute md:bottom-0 lg:bottom-[10vw] flex flex-col items-start justify-center px-4 sm:px-8 md:px-0 md:mx-20 gap-3 sm:gap-5 w-full md:w-auto">
         {/* Title / Logo */}
         <button
           onClick={() => open()}
-          className="animate-float-up cursor-pointer z-20 relative"
+          className="animate-float-up cursor-pointer z-20 relative max-w-full"
         >
           {!disableClearLogo && displayLogo ? (
             <img
-              className={`min-w-[150px] w-auto max-w-[calc(100%-5rem)] lg:max-w-[60%] xl:max-w-[600px] max-h-[200px] xl:max-h-[320px] h-full drop-shadow-2xl`}
+              className="w-auto max-w-[82vw] sm:max-w-[70vw] md:max-w-[56vw] xl:max-w-[600px] max-h-[88px] sm:max-h-[130px] md:max-h-[200px] xl:max-h-[320px] h-full drop-shadow-2xl object-contain"
               src={displayLogo}
               alt={item.title}
             />
           ) : (
             <p
-              className={`font-bold text-xl sm:text-2xl md:text-3xl xl:text-4xl 2xl:text-5xl max-w-screen-lg line-clamp-2 md:line-clamp-3 lg:line-clamp-none drop-shadow-lg`}
+              className="font-bold text-xl sm:text-2xl md:text-3xl xl:text-4xl 2xl:text-5xl max-w-screen-lg line-clamp-2 md:line-clamp-3 lg:line-clamp-none drop-shadow-lg"
             >
               {item.title}
             </p>
@@ -98,21 +102,21 @@ export const Hero: FC<{ item: Plex.Metadata }> = ({ item }) => {
         </button>
 
         {/* Glassmorphic metadata pills */}
-        <div className="flex flex-row flex-wrap items-center gap-2 animate-float-up-delay-1">
+        <div className="flex flex-row flex-wrap items-center gap-1.5 sm:gap-2 animate-float-up-delay-1 max-w-full">
           {rating && (
-            <span className="glass-pill rounded-full px-3 py-1.5 text-xs font-semibold text-yellow-300/90 flex items-center gap-1.5 glass-glow-accent">
+            <span className="glass-pill rounded-full px-2.5 sm:px-3 py-1 text-[11px] sm:text-xs font-semibold text-yellow-300/90 flex items-center gap-1 glass-glow-accent">
               <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
               {Number(rating).toFixed(1)}
             </span>
           )}
           {year && (
-            <span className="glass-pill rounded-full px-3 py-1.5 text-xs font-semibold text-white/80 flex items-center gap-1.5">
+            <span className="glass-pill rounded-full px-2.5 sm:px-3 py-1 text-[11px] sm:text-xs font-semibold text-white/80 flex items-center gap-1">
               <Calendar className="w-3 h-3" />
               {year}
             </span>
           )}
           {duration && (
-            <span className="glass-pill rounded-full px-3 py-1.5 text-xs font-semibold text-white/80 flex items-center gap-1.5">
+            <span className="glass-pill rounded-full px-2.5 sm:px-3 py-1 text-[11px] sm:text-xs font-semibold text-white/80 flex items-center gap-1">
               <Clock className="w-3 h-3" />
               {duration}m
             </span>
@@ -125,7 +129,7 @@ export const Hero: FC<{ item: Plex.Metadata }> = ({ item }) => {
           {genres?.map((genre) => (
             <span
               key={genre.tag}
-              className="glass-pill rounded-full px-3 py-1.5 text-xs font-medium text-white/70"
+              className="glass-pill rounded-full px-2.5 sm:px-3 py-1 text-[11px] sm:text-xs font-medium text-white/70"
             >
               {genre.tag}
             </span>
@@ -135,9 +139,13 @@ export const Hero: FC<{ item: Plex.Metadata }> = ({ item }) => {
         {/* Summary in a glass card */}
         <div
           ref={summaryRef}
-          className="glass rounded-2xl px-5 py-3 max-w-[620px] glass-glow transition-all duration-300 animate-float-up-delay-2"
+          className="glass rounded-2xl px-4 sm:px-5 py-3 max-w-[620px] glass-glow transition-all duration-300 animate-float-up-delay-2 w-full md:w-auto"
         >
-          <p className={`font-medium text-base text-white/85 leading-relaxed transition-all duration-300 ${isExpanded ? '' : 'line-clamp-3'}`}>
+          <p
+            className={`font-medium text-sm sm:text-base text-white/85 leading-relaxed transition-all duration-300 ${
+              isExpanded ? "" : "line-clamp-3"
+            }`}
+          >
             {item.summary}
           </p>
           {item.summary && item.summary.length > 150 && (
@@ -146,7 +154,7 @@ export const Hero: FC<{ item: Plex.Metadata }> = ({ item }) => {
                 e.stopPropagation();
                 setIsExpanded(!isExpanded);
               }}
-              className="mt-2 text-sm font-semibold text-white/70 hover:text-white transition-colors flex items-center gap-1"
+              className="mt-2 text-xs sm:text-sm font-semibold text-white/70 hover:text-white transition-colors flex items-center gap-1"
             >
               {isExpanded ? t("hero.readLess") : t("hero.readMore")}
               <svg
@@ -168,11 +176,11 @@ export const Hero: FC<{ item: Plex.Metadata }> = ({ item }) => {
         </div>
 
         {/* Glassmorphic action buttons */}
-        <div className="flex flex-row gap-3 animate-float-up-delay-3">
+        <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 animate-float-up-delay-3 w-full md:w-auto">
           {metadata.data && (
             <button
               onClick={play}
-              className="flex items-center gap-2.5 px-7 py-3 rounded-2xl bg-white text-black font-bold text-base hover:bg-white/90 hover:scale-[1.03] active:scale-[0.97] transition-all duration-200 shadow-lg shadow-white/20"
+              className="flex items-center justify-center gap-2.5 px-5 sm:px-7 py-3 rounded-2xl bg-white text-black font-bold text-sm sm:text-base hover:bg-white/90 hover:scale-[1.03] active:scale-[0.97] transition-all duration-200 shadow-lg shadow-white/20 w-full sm:w-auto"
             >
               <Play fill="currentColor" className="w-5 h-5" /> {t("hero.play")}
             </button>
@@ -180,7 +188,7 @@ export const Hero: FC<{ item: Plex.Metadata }> = ({ item }) => {
           <button
             type="button"
             onClick={() => open()}
-            className="flex items-center gap-2.5 px-7 py-3 rounded-2xl glass-strong font-bold text-base text-white hover:bg-white/20 hover:scale-[1.03] active:scale-[0.97] transition-all duration-200 glass-glow"
+            className="flex items-center justify-center gap-2.5 px-5 sm:px-7 py-3 rounded-2xl glass-strong font-bold text-sm sm:text-base text-white hover:bg-white/20 hover:scale-[1.03] active:scale-[0.97] transition-all duration-200 glass-glow w-full sm:w-auto"
           >
             <Info className="w-5 h-5" /> {t("hero.moreInfo")}
           </button>
