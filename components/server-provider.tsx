@@ -289,75 +289,91 @@ function UserSelect() {
   }, []);
 
   return (
-    <div className="p-10 sm:p-20 md:p-30 lg:p-40 flex flex-col gap-4">
-      <p className="font-medium text-xl">Select a User</p>
-      {users.map((user, index) => (
-        <div
-          key={user.uuid}
-          className="group hover:text-primary bg-muted/40 rounded-lg border hover:border-primary/80 w-full flex flex-row flex-wrap gap-2"
-        >
-          <button
-            onClick={() => {
-              if (user.hasPassword) {
-                setViewPassword((prev) => (prev === index ? null : index));
-              } else {
-                handleSubmit({ uuid: user.uuid });
-              }
-            }}
-            className="w-full flex gap-2 items-center p-2 overflow-hidden flex-1 min-w-fit disabled:text-muted-foreground"
-            disabled={loading}
+    <div className="min-h-[70vh] px-6 py-10 sm:px-10 md:px-16 flex flex-col items-center justify-center gap-8">
+      <div className="text-center space-y-1">
+        <p className="font-semibold text-2xl sm:text-3xl tracking-tight">
+          Select a User
+        </p>
+        <p className="text-sm text-muted-foreground">
+          Choose a profile to continue
+        </p>
+      </div>
+
+      <div className="w-full max-w-6xl flex flex-wrap justify-center gap-4 sm:gap-6">
+        {users.map((user, index) => (
+          <div
+            key={user.uuid}
+            className={cn(
+              "group w-[160px] sm:w-[180px] rounded-2xl border bg-muted/30 transition-all",
+              "hover:border-primary/80 hover:bg-muted/50 hover:text-primary hover:scale-[1.03]",
+              "focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/30",
+              viewPassword === index && "border-primary/80 bg-muted/50",
+            )}
           >
-            <div>
-              <Avatar>
+            <button
+              onClick={() => {
+                if (user.hasPassword) {
+                  setViewPassword((prev) => (prev === index ? null : index));
+                } else {
+                  handleSubmit({ uuid: user.uuid });
+                }
+              }}
+              className="w-full flex flex-col items-center justify-center gap-3 p-4 sm:p-5 text-center disabled:text-muted-foreground"
+              disabled={loading}
+            >
+              <Avatar className="h-16 w-16 sm:h-20 sm:w-20 ring-2 ring-background shadow-sm transition-transform group-hover:scale-105">
                 <AvatarImage src={user.thumb} />
                 <AvatarFallback>
                   {user.title.slice(0, 2).toUpperCase()}
                 </AvatarFallback>
               </Avatar>
-            </div>
-            <p className="font-semibold leading-tight">{user.title}</p>
-          </button>
-          {viewPassword === index && (
-            <form
-              id="form-element"
-              onSubmit={(e) => {
-                e.preventDefault();
-                const data = Object.fromEntries(
-                  new FormData(e.target as HTMLFormElement),
-                ) as unknown as {
-                  userPin: string;
-                };
-                handleSubmit({ uuid: user.uuid, pin: data.userPin });
-              }}
-              className={cn(
-                "p-2 overflow-hidden transition-[height] flex gap-2 items-end",
-              )}
-            >
-              <InputOTP
-                maxLength={4}
-                pattern={REGEXP_ONLY_DIGITS_AND_CHARS}
-                autoFocus
-                required
-                id="password-input"
-                name="userPin"
-                onChange={(value) => {
-                  if (value.length === 4) {
-                    handleSubmit({ uuid: user.uuid, pin: value });
-                  }
+              <p className="font-semibold leading-tight line-clamp-2 min-h-[2.5rem] flex items-center">
+                {user.title}
+              </p>
+            </button>
+
+            {viewPassword === index && (
+              <form
+                id="form-element"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  const data = Object.fromEntries(
+                    new FormData(e.target as HTMLFormElement),
+                  ) as unknown as {
+                    userPin: string;
+                  };
+                  handleSubmit({ uuid: user.uuid, pin: data.userPin });
                 }}
-                disabled={loading}
+                className={cn(
+                  "px-3 pb-4 sm:px-4 sm:pb-5 overflow-hidden flex justify-center",
+                )}
               >
-                <InputOTPGroup>
-                  <InputOTPSlot index={0} />
-                  <InputOTPSlot index={1} />
-                  <InputOTPSlot index={2} />
-                  <InputOTPSlot index={3} />
-                </InputOTPGroup>
-              </InputOTP>
-            </form>
-          )}
-        </div>
-      ))}
+                <InputOTP
+                  maxLength={4}
+                  pattern={REGEXP_ONLY_DIGITS_AND_CHARS}
+                  autoFocus
+                  required
+                  id="password-input"
+                  name="userPin"
+                  onChange={(value) => {
+                    if (value.length === 4) {
+                      handleSubmit({ uuid: user.uuid, pin: value });
+                    }
+                  }}
+                  disabled={loading}
+                >
+                  <InputOTPGroup>
+                    <InputOTPSlot index={0} />
+                    <InputOTPSlot index={1} />
+                    <InputOTPSlot index={2} />
+                    <InputOTPSlot index={3} />
+                  </InputOTPGroup>
+                </InputOTP>
+              </form>
+            )}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
