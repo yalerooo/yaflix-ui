@@ -179,6 +179,16 @@ const translations: Record<AppLanguage, TranslationNode> = {
     ui: {
       commandPaletteTitle: "Paleta de comandos",
     },
+    hubs: {
+      continueWatching: "Seguir viendo",
+      recentlyAdded: "Añadido recientemente",
+      recentlyReleased: "Estrenado recientemente",
+      onDeck: "A continuación",
+      topRated: "Mejor valorado",
+      trending: "Tendencias",
+      popular: "Popular",
+      recommended: "Recomendado",
+    },
     common: {
       item: "elemento",
       items: "elementos",
@@ -364,6 +374,16 @@ const translations: Record<AppLanguage, TranslationNode> = {
     },
     ui: {
       commandPaletteTitle: "Command palette",
+    },
+    hubs: {
+      continueWatching: "Continue Watching",
+      recentlyAdded: "Recently Added",
+      recentlyReleased: "Recently Released",
+      onDeck: "On Deck",
+      topRated: "Top Rated",
+      trending: "Trending",
+      popular: "Popular",
+      recommended: "Recommended",
     },
     common: {
       item: "item",

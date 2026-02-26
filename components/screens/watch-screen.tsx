@@ -105,6 +105,7 @@ export const WatchScreen: FC<{ watch: string | undefined }> = ({ watch }) => {
   const [settingsView, setSettingsView] = useState<'main' | 'quality' | 'audio' | 'subtitles'>('main');
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [videoWidth, setVideoWidth] = useState<number>(0);
+  const [isMobileLike, setIsMobileLike] = useState(false);
   const controlsHideTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
     null,
   );
@@ -117,28 +118,31 @@ export const WatchScreen: FC<{ watch: string | undefined }> = ({ watch }) => {
   }, []);
 
   const scheduleControlsHide = useCallback(() => {
+    if (isMobileLike) return;
     clearControlsTimer();
     controlsHideTimeoutRef.current = setTimeout(() => {
       setShowControls(false);
-    }, 5000);
-  }, [clearControlsTimer]);
+    }, 3000);
+  }, [clearControlsTimer, isMobileLike]);
 
   const revealControls = useCallback(() => {
     setShowControls(true);
-    scheduleControlsHide();
-  }, [scheduleControlsHide]);
+    if (!isMobileLike) {
+      scheduleControlsHide();
+    }
+  }, [isMobileLike, scheduleControlsHide]);
 
   const toggleControlsVisibility = useCallback(() => {
     setShowControls((prev) => {
       const next = !prev;
-      if (next) {
+      if (next && !isMobileLike) {
         scheduleControlsHide();
       } else {
         clearControlsTimer();
       }
       return next;
     });
-  }, [clearControlsTimer, scheduleControlsHide]);
+  }, [clearControlsTimer, isMobileLike, scheduleControlsHide]);
 
   const lockLandscapeIfPossible = useCallback(async () => {
     try {
@@ -185,6 +189,18 @@ export const WatchScreen: FC<{ watch: string | undefined }> = ({ watch }) => {
       console.error("Fullscreen error:", error);
     }
   }, [lockLandscapeIfPossible, unlockOrientationIfPossible]);
+
+  useEffect(() => {
+    const media = window.matchMedia("(max-width: 768px), (pointer: coarse)");
+    const update = () => setIsMobileLike(media.matches);
+    update();
+    media.addEventListener?.("change", update);
+    window.addEventListener("resize", update);
+    return () => {
+      media.removeEventListener?.("change", update);
+      window.removeEventListener("resize", update);
+    };
+  }, []);
 
   useEffect(() => {
     const handleFullscreenChange = () => {
@@ -328,6 +344,11 @@ export const WatchScreen: FC<{ watch: string | undefined }> = ({ watch }) => {
   };
 
   useEffect(() => {
+    if (isMobileLike) {
+      clearControlsTimer();
+      return;
+    }
+
     let timeout: NodeJS.Timeout | null = null;
     const move = () => {
       if (timeout) clearTimeout(timeout);
@@ -342,14 +363,12 @@ export const WatchScreen: FC<{ watch: string | undefined }> = ({ watch }) => {
 
     document.addEventListener("mouseleave", exit);
     document.addEventListener("mousemove", move);
-    document.addEventListener("touchstart", move, { passive: true });
     return () => {
       document.removeEventListener("mouseleave", exit);
       document.removeEventListener("mousemove", move);
-      document.removeEventListener("touchstart", move);
       clearControlsTimer();
     };
-  }, [clearControlsTimer, revealControls]);
+  }, [clearControlsTimer, isMobileLike, revealControls]);
 
   const timeline = (state: "playing" | "stopped" | "paused" | "buffering") => {
     if (player.current && watch) {
@@ -611,7 +630,11 @@ export const WatchScreen: FC<{ watch: string | undefined }> = ({ watch }) => {
 
                 switch (e.detail) {
                   case 1:
-                    toggleControlsVisibility();
+                    if (isMobileLike) {
+                      toggleControlsVisibility();
+                    } else {
+                      revealControls();
+                    }
                     break;
                   case 2:
                     toggleFullscreenPlayer();

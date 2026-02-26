@@ -225,6 +225,7 @@ const HubItem = forwardRef<
   const router = useRouter();
   const pathname = usePathname();
   const { user } = useSession();
+  const { t } = useSettings();
   const { isEpisode, isSeason, isShow, isMovie } = info;
   const canEdit = isAdminUser(user) && canEditType(item.type);
 
@@ -245,7 +246,7 @@ const HubItem = forwardRef<
       ref={ref}
       index={index}
       hoverview={
-        isOnDeck ? (
+        isOnDeck && !isContinueWatching ? (
           <HubFloatingItem item={item} info={info} onUpdate={onUpdate} isContinueWatching={isContinueWatching} />
         ) : undefined
       }
@@ -268,13 +269,53 @@ const HubItem = forwardRef<
           </button>
         )}
         {isContinueWatching && (
-          <button
-            onClick={handleRemoveFromContinueWatching}
-            className="absolute top-2 right-2 z-10 w-7 h-7 rounded-full bg-black/70 hover:bg-black/90 flex items-center justify-center transition-all opacity-0 group-hover:opacity-100 glass-dark"
-            title="Quitar de Seguir viendo"
-          >
-            <X className="w-4 h-4 text-white" strokeWidth={2.5} />
-          </button>
+          <div className="absolute top-2 right-2 z-10 flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-all">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                ServerApi[info.watched ? "unscrobble" : "scrobble"]({
+                  key: item.ratingKey,
+                }).then((success) => {
+                  if (success) onUpdate(item);
+                });
+              }}
+              className="w-7 h-7 rounded-full bg-black/70 hover:bg-black/90 flex items-center justify-center glass-dark"
+              title={
+                info.watched
+                  ? t("metaYaflix.markAsUnwatched")
+                  : t("metaYaflix.markAsWatched")
+              }
+            >
+              {info.watched ? (
+                <svg
+                  className="w-4 h-4 text-white"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                >
+                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2M9.29 16.29 5.7 12.7a.996.996 0 0 1 0-1.41c.39-.39 1.02-.39 1.41 0L10 14.17l6.88-6.88c.39-.39 1.02-.39 1.41 0s.39 1.02 0 1.41l-7.59 7.59c-.38.39-1.02.39-1.41 0" />
+                </svg>
+              ) : (
+                <svg
+                  className="w-4 h-4 text-white"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.4"
+                >
+                  <circle cx="12" cy="12" r="9" />
+                  <path d="M8 12.5l2.5 2.5L16 9.5" opacity="0.5" />
+                </svg>
+              )}
+            </button>
+            <button
+              onClick={handleRemoveFromContinueWatching}
+              className="w-7 h-7 rounded-full bg-black/70 hover:bg-black/90 flex items-center justify-center glass-dark"
+              title="Quitar de Seguir viendo"
+            >
+              <X className="w-4 h-4 text-white" strokeWidth={2.5} />
+            </button>
+          </div>
         )}
         {isOnDeck ? (
           <OnDeckImagePreviewItem
@@ -376,6 +417,24 @@ export const HubSlider: FC<{
     undefined,
   );
 
+  const localizeHubTitle = (title: string) => {
+    const replacements: Array<[RegExp, string]> = [
+      [/\bContinue Watching\b/i, t("hubs.continueWatching")],
+      [/\bRecently Added\b/i, t("hubs.recentlyAdded")],
+      [/\bRecently Released\b/i, t("hubs.recentlyReleased")],
+      [/\bOn Deck\b/i, t("hubs.onDeck")],
+      [/\bTop Rated\b/i, t("hubs.topRated")],
+      [/\bTrending\b/i, t("hubs.trending")],
+      [/\bPopular\b/i, t("hubs.popular")],
+      [/\bRecommended\b/i, t("hubs.recommended")],
+    ];
+
+    return replacements.reduce(
+      (acc, [pattern, replacement]) => acc.replace(pattern, replacement),
+      title,
+    );
+  };
+
   useEffect(() => {
     if (!hasMore || prevHubLength === hub.Metadata?.length || page === 0) {
       return;
@@ -444,7 +503,7 @@ export const HubSlider: FC<{
         className="text-left flex flex-row items-center mx-10 md:mx-20 group gap-3 mb-4"
         onClick={() => {
           router.push(
-            `${pathname}?${qs.stringify({ key: hub.key, libtitle: hub.title, ...(id ? { contentDirectoryID: id } : {}) })}`,
+            `${pathname}?${qs.stringify({ key: hub.key, libtitle: localizeHubTitle(hub.title), ...(id ? { contentDirectoryID: id } : {}) })}`,
             {
               scroll: false,
             },
@@ -452,7 +511,7 @@ export const HubSlider: FC<{
         }}
       >
         <span className="glass-pill rounded-full px-4 py-1.5 font-semibold text-sm md:text-base text-white/90 group-hover:text-white group-hover:bg-white/15 transition-all duration-200">
-          {hub.title}
+          {localizeHubTitle(hub.title)}
         </span>
         <div className="group-hover:opacity-100 group-hover:translate-x-0 mt-0.5 opacity-0 transition duration-200 -translate-x-full">
           <ChevronRight className="h-5 w-5 text-plex" />
@@ -462,7 +521,7 @@ export const HubSlider: FC<{
         <Carousel
           edges={isTiny ? 40 : 80}
           spacing={6}
-          scale={isTiny ? 1.15 : 1.3}
+          scale={isContinueWatching ? 1 : isTiny ? 1.15 : 1.3}
           minimumVisibleItem={isOnDeck ? 1 : isTiny ? 2 : 3}
         >
           {hub.Metadata.map((item, index) => {

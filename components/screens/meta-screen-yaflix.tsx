@@ -927,10 +927,7 @@ export const MetaScreenYaflix: FC = () => {
           </div>
         </div>
 
-        <div
-          className="relative min-h-screen w-full min-w-0 z-10 -mt-[4.5rem]"
-          style={{ overflowX: 'clip' }}
-        >
+        <div className="relative min-h-screen w-full min-w-0 z-10 -mt-[4.5rem]">
 
           {/* Hero Section */}
           <div className="relative z-10 pb-16">
@@ -1142,8 +1139,8 @@ export const MetaScreenYaflix: FC = () => {
             </div>
 
             {/* Tabs - Sticky */}
-            <div className="sticky top-0 z-30 mb-6 sm:mb-8">
-              <div className="px-4 sm:px-8 md:px-16 lg:px-32 flex gap-4 sm:gap-8 items-center">
+            <div className="mb-6 sm:mb-8">
+              <div className="px-4 sm:px-8 md:px-16 lg:px-32 flex gap-4 sm:gap-8 items-center overflow-x-auto no-scrollbar">
                 <button
                   onClick={() => setActiveTab("general")}
                   className={cn(
@@ -1177,9 +1174,10 @@ export const MetaScreenYaflix: FC = () => {
                         scroll: false,
                       });
                     }}
-                    className="glass-pill rounded-full px-4 py-2 text-sm font-semibold text-white/90 hover:text-white hover:bg-white/15 transition-all duration-200"
+                    className="px-3 sm:px-6 py-3 sm:py-4 text-sm sm:text-base font-semibold transition-all relative whitespace-nowrap text-white/80 hover:text-white"
                   >
                     {t("metaYaflix.moreEpisodes")}
+                    <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-white/30" />
                   </button>
                 )}
               </div>

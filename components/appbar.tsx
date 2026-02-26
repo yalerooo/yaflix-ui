@@ -132,52 +132,108 @@ export const Appbar = () => {
             <SheetTrigger className="block md:hidden backdrop-blur-lg bg-white/10 border border-white/20 rounded-full p-2 text-white hover:bg-white/20 transition-all duration-200 shadow-lg">
               <Menu />
             </SheetTrigger>
-          <SheetContent side="left" className="max-w-[300px]">
-            <SheetHeader className="pb-4 flex flex-row justify-between items-center space-y-0">
-              <SheetTitle>Yaflix</SheetTitle>
+          <SheetContent
+            side="left"
+            className="max-w-[340px] w-[88vw] border-white/10 bg-black/80 backdrop-blur-2xl p-0 text-white"
+          >
+            <div className="absolute inset-0 pointer-events-none">
+              <div className="absolute -top-16 -left-10 h-40 w-40 rounded-full bg-plex/20 blur-3xl" />
+              <div className="absolute bottom-12 -right-10 h-36 w-36 rounded-full bg-white/10 blur-3xl" />
+            </div>
+
+            <div className="relative h-full flex flex-col">
+            <SheetHeader className="p-4 pb-3 flex flex-row justify-between items-center space-y-0 border-b border-white/10">
+              <div className="flex items-center gap-3">
+                <div className="h-9 w-9 rounded-xl bg-white/10 border border-white/15 flex items-center justify-center shadow-lg">
+                  <TvMinimal className="h-4 w-4" />
+                </div>
+                <div className="text-left">
+                  <SheetTitle className="text-white tracking-tight">Yaflix</SheetTitle>
+                  <p className="text-[11px] text-white/55 font-medium">
+                    Plex Client
+                  </p>
+                </div>
+              </div>
               <SheetClose asChild>
-                <Button variant="search" size="icon">
+                <Button
+                  variant="search"
+                  size="icon"
+                  className="bg-white/5 border-white/10 hover:bg-white/10 text-white"
+                >
                   <X />
                 </Button>
               </SheetClose>
             </SheetHeader>
-            <div className="flex flex-col gap-4">
-              <Button
-                variant="search"
-                asChild
-                className="justify-start data-[state=active]:border-primary data-[state=active]:text-primary"
-              >
-                <Link
-                  href="/"
-                  data-state={path === "/" ? "active" : "inactive"}
-                >
-                  <House />
-                  {t("appbar.home")}
-                </Link>
-              </Button>
-              {libraries.map((section) =>
-                !disabledLibraries[section.title] ? (
+            <div className="px-4 pt-4 pb-5 flex flex-col gap-4 overflow-y-auto">
+              {user && (
+                <div className="rounded-2xl border border-white/10 bg-white/5 p-3 flex items-center gap-3">
+                  <Avatar className="h-10 w-10 ring-1 ring-white/20">
+                    <AvatarImage src={user.thumb} />
+                    <AvatarFallback>
+                      {user.username.slice(0, 2).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-white line-clamp-1">
+                      {he.decode(user.title ?? user.username)}
+                    </p>
+                    <p className="text-xs text-white/55 line-clamp-1">
+                      {t("appbar.home")}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-2 space-y-1.5">
+                <SheetClose asChild>
                   <Button
-                    key={section.key}
-                    variant="search"
+                    variant="ghost"
                     asChild
-                    className="justify-start data-[state=active]:border-primary data-[state=active]:text-primary"
+                    className="h-11 justify-start rounded-xl px-3 text-white/85 hover:text-white hover:bg-white/10 data-[state=active]:bg-white/10 data-[state=active]:text-white"
                   >
                     <Link
-                      href={`/browse/${section.key}`}
-                      data-state={
-                        path.includes(`/browse/${section.key}`)
-                          ? "active"
-                          : "inactive"
-                      }
+                      href="/"
+                      data-state={path === "/" ? "active" : "inactive"}
                     >
-                      {section.type === "movie" && <Film size={20} />}
-                      {section.type === "show" && <TvMinimal size={20} />}
-                      {section.title}
+                      <House className="h-4 w-4" />
+                      {t("appbar.home")}
                     </Link>
                   </Button>
-                ) : null,
-              )}
+                </SheetClose>
+
+                {libraries.map((section) =>
+                  !disabledLibraries[section.title] ? (
+                    <SheetClose asChild key={section.key}>
+                      <Button
+                        variant="ghost"
+                        asChild
+                        className="h-11 justify-start rounded-xl px-3 text-white/85 hover:text-white hover:bg-white/10 data-[state=active]:bg-white/10 data-[state=active]:text-white"
+                      >
+                        <Link
+                          href={`/browse/${section.key}`}
+                          data-state={
+                            path.includes(`/browse/${section.key}`)
+                              ? "active"
+                              : "inactive"
+                          }
+                        >
+                          {section.type === "movie" && <Film className="h-4 w-4" />}
+                          {section.type === "show" && <TvMinimal className="h-4 w-4" />}
+                          {!["movie", "show"].includes(section.type) && (
+                            <Server className="h-4 w-4" />
+                          )}
+                          <span className="truncate">{section.title}</span>
+                        </Link>
+                      </Button>
+                    </SheetClose>
+                  ) : null,
+                )}
+              </div>
+
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-2">
+                <Search />
+              </div>
+            </div>
             </div>
           </SheetContent>
         </Sheet>
