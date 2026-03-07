@@ -322,7 +322,7 @@ const HubItem = forwardRef<
             item={item}
             info={info}
             className="rounded-xl overflow-hidden"
-            action="open"
+            action={isContinueWatching ? "play" : "open"}
             progress={false}
             isOnDeck
           />

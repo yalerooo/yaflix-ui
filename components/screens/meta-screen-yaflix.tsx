@@ -343,6 +343,7 @@ export const MetaScreenYaflix: FC = () => {
     // Only fetch for shows, seasons, or episodes
     if (info.isShow || info.isSeason || info.isEpisode) {
       let isCancelled = false;
+      setFanartLogo(null); // clear stale logo from previous item immediately
       
       getSeriesLogo(metadata)
         .then((logoUrl) => {
@@ -1086,7 +1087,10 @@ export const MetaScreenYaflix: FC = () => {
                       <Play className="w-5 h-5 sm:w-6 sm:h-6" fill="currentColor" />
                       <span>{t("metaYaflix.play")}</span>
                     </Button>
-                    {(nextEpisodeInfo || info.playable) && (
+                    {(nextEpisodeInfo
+                      ? (nextEpisodeInfo.season != null && nextEpisodeInfo.episode != null)
+                      : (info.playable?.season != null && info.playable?.episode != null)
+                    ) && (
                       <span className="text-white/70 text-xs sm:text-sm font-medium">
                         {nextEpisodeInfo
                           ? `T${nextEpisodeInfo.season} E${nextEpisodeInfo.episode}`

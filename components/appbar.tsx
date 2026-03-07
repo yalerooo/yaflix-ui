@@ -8,6 +8,7 @@ import {
   ChevronsLeftRightEllipsis,
   Film,
   House,
+  LayoutGrid,
   LogOut,
   Menu,
   Server,
@@ -100,7 +101,7 @@ export const Appbar = () => {
                       <Button
                         onClick={() => {
                           router.push(
-                            `${path}?${qs.stringify({ key: `/library/sections/${section.key}/all?sort=titleSort`, libtitle: `${section.title} Library` })}`,
+                            `${path}?${qs.stringify({ key: `/library/sections/${section.key}/all?sort=titleSort`, libtitle: section.title })}`,
                             {
                               scroll: false,
                             },
@@ -203,29 +204,52 @@ export const Appbar = () => {
 
                 {libraries.map((section) =>
                   !disabledLibraries[section.title] ? (
-                    <SheetClose asChild key={section.key}>
-                      <Button
-                        variant="ghost"
-                        asChild
-                        className="h-11 justify-start rounded-xl px-3 text-white/85 hover:text-white hover:bg-white/10 data-[state=active]:bg-white/10 data-[state=active]:text-white"
-                      >
-                        <Link
-                          href={`/browse/${section.key}`}
-                          data-state={
-                            path.includes(`/browse/${section.key}`)
-                              ? "active"
-                              : "inactive"
-                          }
-                        >
-                          {section.type === "movie" && <Film className="h-4 w-4" />}
-                          {section.type === "show" && <TvMinimal className="h-4 w-4" />}
-                          {!["movie", "show"].includes(section.type) && (
-                            <Server className="h-4 w-4" />
-                          )}
-                          <span className="truncate">{section.title}</span>
-                        </Link>
-                      </Button>
-                    </SheetClose>
+                    <div key={section.key} className="flex flex-col gap-0.5">
+                      <div className="flex items-center gap-1 px-1 pb-0.5">
+                        {section.type === "movie" && <Film className="h-3.5 w-3.5 text-white/40" />}
+                        {section.type === "show" && <TvMinimal className="h-3.5 w-3.5 text-white/40" />}
+                        {!["movie", "show"].includes(section.type) && (
+                          <Server className="h-3.5 w-3.5 text-white/40" />
+                        )}
+                        <span className="text-[11px] font-semibold text-white/40 uppercase tracking-wider truncate">{section.title}</span>
+                      </div>
+                      <div className="flex gap-1">
+                        <SheetClose asChild>
+                          <Button
+                            variant="ghost"
+                            asChild
+                            className="flex-1 h-10 justify-start rounded-xl px-3 text-white/85 hover:text-white hover:bg-white/10 data-[state=active]:bg-white/10 data-[state=active]:text-white"
+                          >
+                            <Link
+                              href={`/browse/${section.key}`}
+                              data-state={
+                                path.includes(`/browse/${section.key}`)
+                                  ? "active"
+                                  : "inactive"
+                              }
+                            >
+                              <House className="h-4 w-4" />
+                              <span className="truncate">{t("appbar.browse")}</span>
+                            </Link>
+                          </Button>
+                        </SheetClose>
+                        <SheetClose asChild>
+                          <Button
+                            variant="ghost"
+                            className="flex-1 h-10 justify-start rounded-xl px-3 text-white/85 hover:text-white hover:bg-white/10"
+                            onClick={() => {
+                              router.push(
+                                `${path}?${qs.stringify({ key: `/library/sections/${section.key}/all?sort=titleSort`, libtitle: section.title })}`,
+                                { scroll: false },
+                              );
+                            }}
+                          >
+                            <LayoutGrid className="h-4 w-4" />
+                            <span className="truncate">{t("appbar.library")}</span>
+                          </Button>
+                        </SheetClose>
+                      </div>
+                    </div>
                   ) : null,
                 )}
               </div>

@@ -291,7 +291,7 @@ export const useHubItem = (
   const quality = extractQuality(isType, item);
   const clearLogo = extractClearLogo(item);
 
-  const open = (mid: string = item.ratingKey) => {
+  const open = (mid: string = isType.season && item.parentRatingKey ? item.parentRatingKey : item.ratingKey) => {
     if (searchParams.get("mid") !== mid) {
       router.push(`${pathname}?mid=${mid}`, {
         scroll: false,

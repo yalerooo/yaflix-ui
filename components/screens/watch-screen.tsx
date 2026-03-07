@@ -687,6 +687,7 @@ export const WatchScreen: FC<{ watch: string | undefined }> = ({ watch }) => {
                 if (playing) {
                   timeline("paused");
                 }
+                revealControls();
               }}
               onPlay={() => {
                 setPlaying(true);
@@ -772,7 +773,7 @@ export const WatchScreen: FC<{ watch: string | undefined }> = ({ watch }) => {
             />
           </div>
           <div
-            className={`sticky top-0 w-full flex flex-row items-center gap-2 sm:gap-4 p-3 sm:p-6 bg-background/80 ${showControls || !playing ? "" : "-translate-y-full"} transition`}
+            className={`sticky top-0 w-full flex flex-row items-center gap-2 sm:gap-4 p-3 sm:p-6 bg-background/80 ${showControls ? "" : "-translate-y-full"} transition`}
           >
             <button
               onClick={() => back()}
@@ -887,7 +888,7 @@ export const WatchScreen: FC<{ watch: string | undefined }> = ({ watch }) => {
             )}
           </div>
           <div
-            className={`sticky bottom-0 w-full px-2 sm:px-3 ${showControls || !playing ? "" : "translate-y-full"} transition-all duration-300`}
+            className={`sticky bottom-0 w-full px-2 sm:px-3 ${showControls ? "" : "translate-y-full"} transition-all duration-300`}
           >
             <div 
               className={`mx-auto w-full transition-all duration-300`}

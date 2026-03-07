@@ -109,49 +109,51 @@ export const LibraryScreen: FC<{
         </div>
 
         <div className="relative min-h-screen w-full min-w-0 z-10 -mt-[4.5rem]">
-          {/* Hero Section */}
-          <div className="relative z-10 pb-8">
-            <div className="relative px-4 sm:px-8 md:px-16 lg:px-24 xl:px-32 pt-20 pb-12">
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5 }}
-              >
-                {title && (
-                  <h1 className="text-5xl sm:text-6xl md:text-7xl font-black text-white drop-shadow-[0_4px_20px_rgba(0,0,0,0.9)] tracking-tight leading-tight mb-4">
-                    {title}
-                  </h1>
-                )}
-                <p className="text-white/70 text-lg sm:text-xl">
-                  {filteredMetadata.length}{" "}
-                  {filteredMetadata.length === 1
-                    ? t("libraryScreen.item")
-                    : t("libraryScreen.items")}
-                </p>
-              </motion.div>
-            </div>
-          </div>
-
-          {/* Search Bar */}
-          <div className="px-4 sm:px-8 md:px-16 lg:px-24 xl:px-32 mb-8">
-            <div className="relative max-w-md">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/50" />
-              <input
-                type="text"
-                placeholder={t("libraryScreen.searchPlaceholder")}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-12 pr-10 py-3 backdrop-blur-lg bg-white/10 border border-white/20 rounded-full text-white placeholder-white/40 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-white/30 focus:bg-white/15 transition-all duration-200 shadow-lg"
-              />
-              {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery("")}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-white/50 hover:text-white transition-colors"
-                >
-                  <X className="w-4 h-4" />
-                </button>
+          {/* Hero + Search Section */}
+          <div className="relative z-10 flex flex-col items-center text-center pt-24 pb-12 px-4">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+              className="w-full flex flex-col items-center"
+            >
+              {title && (
+                <h1 className="text-5xl sm:text-6xl md:text-7xl font-black text-white drop-shadow-[0_4px_20px_rgba(0,0,0,0.9)] tracking-tight leading-tight mb-3">
+                  {title}
+                </h1>
               )}
-            </div>
+              <p className="text-white/50 text-base sm:text-lg mb-10">
+                {filteredMetadata.length}{" "}
+                {filteredMetadata.length === 1
+                  ? t("libraryScreen.item")
+                  : t("libraryScreen.items")}
+              </p>
+
+              {/* Search Bar */}
+              <div className="relative w-full max-w-2xl group">
+                {/* outer glow ring */}
+                <div className="absolute -inset-px rounded-2xl bg-gradient-to-r from-white/20 via-white/10 to-white/20 opacity-0 group-focus-within:opacity-100 transition-opacity duration-300 pointer-events-none blur-sm" />
+                {/* inner container */}
+                <div className="relative flex items-center rounded-2xl bg-white/[0.08] border border-white/15 group-focus-within:border-white/30 group-focus-within:bg-white/[0.13] backdrop-blur-2xl shadow-[0_8px_40px_rgba(0,0,0,0.5)] transition-all duration-300 overflow-hidden">
+                  <Search className="shrink-0 ml-5 w-5 h-5 text-white/35 group-focus-within:text-white/70 transition-colors duration-200" />
+                  <input
+                    type="text"
+                    placeholder={t("libraryScreen.searchPlaceholder")}
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full px-4 py-4 bg-transparent text-white placeholder-white/30 text-base font-normal focus:outline-none"
+                  />
+                  {searchQuery && (
+                    <button
+                      onClick={() => setSearchQuery("")}
+                      className="shrink-0 mr-4 w-7 h-7 flex items-center justify-center rounded-full bg-white/15 hover:bg-white/25 text-white/60 hover:text-white transition-all duration-150"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+              </div>
+            </motion.div>
           </div>
 
           {/* Content Grid */}
