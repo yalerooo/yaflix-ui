@@ -14,7 +14,13 @@ import { CarouselWrapper } from "@/components/carousel/carousel";
 import { SearchProvider } from "@/components/search-provider";
 import { SettingsProvider } from "@/components/settings-provider";
 
-const client = new QueryClient();
+const client = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 0,
+    },
+  },
+});
 
 export default function Providers({ children }: { children: ReactNode }) {
   const searchParams = useSearchParams();

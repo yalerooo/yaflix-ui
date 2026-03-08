@@ -47,6 +47,7 @@ import {
   fetchTvShowArtwork,
 } from "@/lib/fanart";
 import { useSettings } from "@/components/settings-provider";
+import { MetadataEditorDialog } from "@/components/metadata-editor-dialog";
 
 function plexImage(path: string | undefined, width?: number, height?: number): string {
   if (!path) return '';
@@ -91,6 +92,8 @@ export const MetaScreenYaflix: FC = () => {
   const [isImageEditorOpen, setImageEditorOpen] = useState(false);
   const [imageSaveError, setImageSaveError] = useState<string | null>(null);
   const [savingImages, setSavingImages] = useState(false);
+  const [reanalyzing, setReanalyzing] = useState(false);
+  const [reanalyzeMessage, setReanalyzeMessage] = useState<string | null>(null);
   const autoEditOpenedForMidRef = useRef<string | null>(null);
   const [loadingImageSuggestions, setLoadingImageSuggestions] = useState(false);
   const [imageSuggestions, setImageSuggestions] = useState<{
@@ -297,10 +300,22 @@ export const MetaScreenYaflix: FC = () => {
     const streams = metadata.Media[0].Part[0].Stream;
     const savedAudio = localStorage.getItem(`audio_${metadata.ratingKey}`);
     const savedSubtitle = localStorage.getItem(`subtitle_${metadata.ratingKey}`);
+
+    const audioStreamIds = new Set(
+      streams.filter((s) => s.streamType === 2).map((s) => s.id.toString())
+    );
+    const subtitleStreamIds = new Set(
+      streams.filter((s) => s.streamType === 3).map((s) => s.id.toString())
+    );
     
-    // Set audio: saved preference, or currently selected, or first audio stream
-    if (savedAudio) {
-      setSelectedAudioStream(savedAudio);
+    // Set audio: saved preference (only if stream still exists), or currently selected, or first audio stream
+    const validSavedAudio = savedAudio && audioStreamIds.has(savedAudio) ? savedAudio : null;
+    if (!validSavedAudio && savedAudio) {
+      // Stream no longer exists — clear stale preference
+      localStorage.removeItem(`audio_${metadata.ratingKey}`);
+    }
+    if (validSavedAudio) {
+      setSelectedAudioStream(validSavedAudio);
     } else {
       const currentAudio = streams.find((s) => s.streamType === 2 && s.selected);
       if (currentAudio) {
@@ -311,9 +326,17 @@ export const MetaScreenYaflix: FC = () => {
       }
     }
     
-    // Set subtitle: saved preference, or currently selected, or "0" (none)
-    if (savedSubtitle) {
-      setSelectedSubtitleStream(savedSubtitle);
+    // Set subtitle: saved preference (only if stream still exists), or currently selected, or "0" (none)
+    const validSavedSubtitle =
+      savedSubtitle === "0" || (savedSubtitle && subtitleStreamIds.has(savedSubtitle))
+        ? savedSubtitle
+        : null;
+    if (!validSavedSubtitle && savedSubtitle) {
+      // Stream no longer exists — clear stale preference
+      localStorage.removeItem(`subtitle_${metadata.ratingKey}`);
+    }
+    if (validSavedSubtitle !== null) {
+      setSelectedSubtitleStream(validSavedSubtitle);
     } else {
       const currentSubtitle = streams.find((s) => s.streamType === 3 && s.selected);
       if (currentSubtitle) {
@@ -834,6 +857,29 @@ export const MetaScreenYaflix: FC = () => {
     setImageEditorOpen(false);
   };
 
+  const handleReanalyze = async () => {
+    if (!metadata || !canEditCurrentMetadata) return;
+    setReanalyzing(true);
+    setReanalyzeMessage(null);
+
+    // Determine the show ratingKey
+    const showKey = info.isShow
+      ? metadata.ratingKey
+      : info.isSeason
+        ? (metadata.parentRatingKey ?? metadata.ratingKey)
+        : info.isEpisode
+          ? (metadata.grandparentRatingKey ?? metadata.parentRatingKey ?? metadata.ratingKey)
+          : metadata.ratingKey;
+
+    const ok = await ServerApi.analyze({ id: showKey });
+    setReanalyzing(false);
+    setReanalyzeMessage(
+      ok ? t("metaYaflix.reanalyzeDone") : t("metaYaflix.reanalyzeFailed")
+    );
+    // Clear message after 6 seconds
+    setTimeout(() => setReanalyzeMessage(null), 6000);
+  };
+
   const updateScrollArrows = () => {
     const el = episodesScrollRef.current;
     if (!el) return;
@@ -1137,6 +1183,19 @@ export const MetaScreenYaflix: FC = () => {
                         {t("metaYaflix.editMetadata")}
                       </Button>
                     )}
+                    {canEditCurrentMetadata && (info.isShow || info.isSeason || info.isEpisode) && (
+                      <Button
+                        variant="outline"
+                        onClick={handleReanalyze}
+                        disabled={reanalyzing}
+                        className="text-white border-white/40 bg-black/30 hover:bg-white/15 hover:text-white"
+                      >
+                        {reanalyzing ? t("metaYaflix.reanalyzing") : t("metaYaflix.reanalyzeEpisodes")}
+                      </Button>
+                    )}
+                    {reanalyzeMessage && (
+                      <span className="text-sm text-white/70">{reanalyzeMessage}</span>
+                    )}
                   </div>
                 </div>
               </div>
@@ -1295,63 +1354,72 @@ export const MetaScreenYaflix: FC = () => {
                               ))
                             ) : (
                               seasonChildren?.map((episode) => (
-                                <a
+                                <div
                                   key={episode.ratingKey}
-                                  href={`/browse/${metadata?.librarySectionID}?${qs.stringify({
-                                    watch: episode.ratingKey,
-                                  })}`}
-                                  className="group w-[220px] sm:w-[250px] md:w-[280px] lg:w-[300px] flex-shrink-0 flex-grow-0"
+                                  className="w-[220px] sm:w-[250px] md:w-[280px] lg:w-[300px] flex-shrink-0 flex-grow-0"
                                 >
-                                  <div className="relative rounded-xl overflow-hidden bg-white/5 hover:bg-white/10 transition-all duration-200">
-                                    <div className="relative w-full aspect-video bg-white/10 overflow-hidden">
-                                      <img
-                                        src={plexImage(episode.thumb)}
-                                        alt={episode.title}
-                                        className="w-full h-full object-cover opacity-60"
-                                      />
-                                      
-                                      {episode.viewCount && episode.viewCount > 0 && (
-                                        <button className="absolute top-2 right-2 w-8 h-8 rounded-full flex items-center justify-center shadow-lg transition-all duration-200 z-20 bg-plex hover:bg-plex/80">
-                                          <Check className="w-4 h-4 text-white" strokeWidth={3} />
-                                        </button>
-                                      )}
+                                  <div className="relative rounded-xl overflow-hidden bg-white/5 transition-all duration-200">
+                                    <a
+                                      href={`/browse/${metadata?.librarySectionID}?${qs.stringify({
+                                        watch: episode.ratingKey,
+                                      })}`}
+                                      className="group block"
+                                    >
+                                      <div className="relative w-full aspect-video bg-white/10 overflow-hidden">
+                                        <img
+                                          src={plexImage(episode.thumb)}
+                                          alt={episode.title}
+                                          className="w-full h-full object-cover opacity-60"
+                                        />
 
-                                      {episode.index === 1 && (
-                                        <div className="absolute top-2 left-2 px-2 py-1 rounded bg-plex text-white text-xs font-bold">
-                                          {t("metaYaflix.next")}
-                                        </div>
-                                      )}
-
-                                      <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/30">
-                                        <div className="w-12 h-12 rounded-full bg-white/90 flex items-center justify-center">
-                                          <Play className="w-6 h-6 text-black ml-0.5" fill="currentColor" />
-                                        </div>
-                                      </div>
-                                    </div>
-
-                                    <div className="p-4">
-                                      <div className="flex items-center gap-2 mb-1">
-                                        <p className="text-plex text-sm font-semibold">
-                                          {t("metaYaflix.episode")} {episode.index}
-                                        </p>
                                         {episode.viewCount && episode.viewCount > 0 && (
-                                          <span className="text-white/40 text-xs">
-                                            • {t("metaYaflix.watched")}
-                                          </span>
+                                          <div className="absolute top-2 right-2 w-8 h-8 rounded-full flex items-center justify-center shadow-lg z-20 bg-plex">
+                                            <Check className="w-4 h-4 text-white" strokeWidth={3} />
+                                          </div>
                                         )}
+
+                                        {episode.index === 1 && (
+                                          <div className="absolute top-2 left-2 px-2 py-1 rounded bg-plex text-white text-xs font-bold">
+                                            {t("metaYaflix.next")}
+                                          </div>
+                                        )}
+
+                                        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/30">
+                                          <div className="w-12 h-12 rounded-full bg-white/90 flex items-center justify-center">
+                                            <Play className="w-6 h-6 text-black ml-0.5" fill="currentColor" />
+                                          </div>
+                                        </div>
                                       </div>
-                                      <h3 className="text-white font-bold text-lg mb-2 line-clamp-1">
-                                        {episode.title}
-                                      </h3>
-                                      <p className="text-white/60 text-sm line-clamp-2 mb-2">
-                                        {episode.summary}
-                                      </p>
-                                      <p className="text-white/50 text-xs font-medium">
-                                        {episode.duration ? `${Math.round(episode.duration / 60000)}m` : ""}
-                                      </p>
-                                    </div>
+                                    </a>
+
+                                    <a
+                                      href={`${pathname}?mid=${episode.ratingKey}`}
+                                      className="block hover:bg-white/10 transition-all duration-200"
+                                    >
+                                      <div className="p-4">
+                                        <div className="flex items-center gap-2 mb-1">
+                                          <p className="text-plex text-sm font-semibold">
+                                            {t("metaYaflix.episode")} {episode.index}
+                                          </p>
+                                          {episode.viewCount && episode.viewCount > 0 && (
+                                            <span className="text-white/40 text-xs">
+                                              • {t("metaYaflix.watched")}
+                                            </span>
+                                          )}
+                                        </div>
+                                        <h3 className="text-white font-bold text-lg mb-2 line-clamp-1">
+                                          {episode.title}
+                                        </h3>
+                                        <p className="text-white/60 text-sm line-clamp-2 mb-2">
+                                          {episode.summary}
+                                        </p>
+                                        <p className="text-white/50 text-xs font-medium">
+                                          {episode.duration ? `${Math.round(episode.duration / 60000)}m` : ""}
+                                        </p>
+                                      </div>
+                                    </a>
                                   </div>
-                                </a>
+                                </div>
                               ))
                             )}
                           </div>
@@ -1400,29 +1468,36 @@ export const MetaScreenYaflix: FC = () => {
                       ))
                     ) : (
                       seasonChildren?.map((episode) => (
-                        <a
+                        <div
                           key={episode.ratingKey}
-                          href={`/browse/${metadata?.librarySectionID}?${qs.stringify({ watch: episode.ratingKey })}`}
-                          className="flex gap-4 group rounded-xl bg-white/5 hover:bg-white/10 transition-all duration-200 overflow-hidden border border-white/5 hover:border-white/10"
+                          className="flex rounded-xl bg-white/5 transition-all duration-200 overflow-hidden border border-white/5"
                         >
-                          <div className="relative w-48 sm:w-56 flex-shrink-0 aspect-video bg-white/10 overflow-hidden">
-                            <img
-                              src={plexImage(episode.thumb)}
-                              alt={episode.title}
-                              className="w-full h-full object-cover opacity-70 group-hover:opacity-100 transition-opacity"
-                            />
-                            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/30">
-                              <div className="w-10 h-10 rounded-full bg-white/90 flex items-center justify-center">
-                                <Play className="w-5 h-5 text-black ml-0.5" fill="currentColor" />
+                          <a
+                            href={`/browse/${metadata?.librarySectionID}?${qs.stringify({ watch: episode.ratingKey })}`}
+                            className="group flex-shrink-0"
+                          >
+                            <div className="relative w-48 sm:w-56 aspect-video bg-white/10 overflow-hidden h-full">
+                              <img
+                                src={plexImage(episode.thumb)}
+                                alt={episode.title}
+                                className="w-full h-full object-cover opacity-70 group-hover:opacity-100 transition-opacity"
+                              />
+                              <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/30">
+                                <div className="w-10 h-10 rounded-full bg-white/90 flex items-center justify-center">
+                                  <Play className="w-5 h-5 text-black ml-0.5" fill="currentColor" />
+                                </div>
                               </div>
+                              {episode.viewCount && episode.viewCount > 0 && (
+                                <div className="absolute top-2 right-2 w-6 h-6 rounded-full flex items-center justify-center bg-plex">
+                                  <Check className="w-3 h-3 text-white" strokeWidth={3} />
+                                </div>
+                              )}
                             </div>
-                            {episode.viewCount && episode.viewCount > 0 && (
-                              <div className="absolute top-2 right-2 w-6 h-6 rounded-full flex items-center justify-center bg-plex">
-                                <Check className="w-3 h-3 text-white" strokeWidth={3} />
-                              </div>
-                            )}
-                          </div>
-                          <div className="flex-1 py-3 pr-4">
+                          </a>
+                          <a
+                            href={`${pathname}?mid=${episode.ratingKey}`}
+                            className="flex-1 py-3 px-4 hover:bg-white/10 transition-all duration-200"
+                          >
                             <div className="flex items-center gap-2 mb-1">
                               <span className="text-plex text-sm font-semibold">
                                 {t("metaYaflix.episode")} {episode.index}
@@ -1444,8 +1519,8 @@ export const MetaScreenYaflix: FC = () => {
                             <p className="text-white/50 text-sm line-clamp-2">
                               {episode.summary}
                             </p>
-                          </div>
-                        </a>
+                          </a>
+                        </div>
                       ))
                     )}
                   </div>
@@ -1498,321 +1573,10 @@ export const MetaScreenYaflix: FC = () => {
           </div>
         </div>
       </DialogContent>
-      <Dialog open={isMetadataEditorOpen} onOpenChange={setMetadataEditorOpen}>
-        <DialogContent className="max-w-2xl bg-zinc-950 border-white/15 text-white">
-          <DialogTitle>{t("metaYaflix.metadataDialogTitle")}</DialogTitle>
-          <DialogDescription className="text-white/70">
-            {t("metaYaflix.metadataDialogDescription", {
-              type: metadata?.type
-                ? t(`common.${metadata.type}`, undefined, metadata.type)
-                : t("metaYaflix.contentFallbackType"),
-            })}
-          </DialogDescription>
-          <form className="space-y-4" onSubmit={handleSaveMetadata}>
-            <div className="space-y-2">
-              <label className="text-sm text-white/80">{t("metaYaflix.title")}</label>
-              <Input
-                value={metadataForm.title}
-                onChange={(e) =>
-                  setMetadataForm((prev) => ({ ...prev, title: e.target.value }))
-                }
-                className="bg-black/30 border-white/20 text-white"
-              />
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="text-sm text-white/80">{t("metaYaflix.sortTitle")}</label>
-                <Input
-                  value={metadataForm.titleSort}
-                  onChange={(e) =>
-                    setMetadataForm((prev) => ({
-                      ...prev,
-                      titleSort: e.target.value,
-                    }))
-                  }
-                  className="bg-black/30 border-white/20 text-white"
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm text-white/80">{t("metaYaflix.originalTitle")}</label>
-                <Input
-                  value={metadataForm.originalTitle}
-                  onChange={(e) =>
-                    setMetadataForm((prev) => ({
-                      ...prev,
-                      originalTitle: e.target.value,
-                    }))
-                  }
-                  className="bg-black/30 border-white/20 text-white"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm text-white/80">{t("metaYaflix.summary")}</label>
-              <textarea
-                value={metadataForm.summary}
-                onChange={(e) =>
-                  setMetadataForm((prev) => ({ ...prev, summary: e.target.value }))
-                }
-                rows={4}
-                className="w-full rounded-md border border-white/20 bg-black/30 px-3 py-2 text-sm text-white"
-              />
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="text-sm text-white/80">{t("metaYaflix.tagline")}</label>
-                <Input
-                  value={metadataForm.tagline}
-                  onChange={(e) =>
-                    setMetadataForm((prev) => ({ ...prev, tagline: e.target.value }))
-                  }
-                  className="bg-black/30 border-white/20 text-white"
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm text-white/80">{t("metaYaflix.studio")}</label>
-                <Input
-                  value={metadataForm.studio}
-                  onChange={(e) =>
-                    setMetadataForm((prev) => ({ ...prev, studio: e.target.value }))
-                  }
-                  className="bg-black/30 border-white/20 text-white"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="text-sm text-white/80">{t("metaYaflix.rating")}</label>
-                <Input
-                  value={metadataForm.contentRating}
-                  onChange={(e) =>
-                    setMetadataForm((prev) => ({
-                      ...prev,
-                      contentRating: e.target.value,
-                    }))
-                  }
-                  className="bg-black/30 border-white/20 text-white"
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm text-white/80">{t("metaYaflix.year")}</label>
-                <Input
-                  value={metadataForm.year}
-                  onChange={(e) =>
-                    setMetadataForm((prev) => ({ ...prev, year: e.target.value }))
-                  }
-                  className="bg-black/30 border-white/20 text-white"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm text-white/80">
-                {t("metaYaflix.releaseDate")}
-              </label>
-              <Input
-                value={metadataForm.originallyAvailableAt}
-                onChange={(e) =>
-                  setMetadataForm((prev) => ({
-                    ...prev,
-                    originallyAvailableAt: e.target.value,
-                  }))
-                }
-                className="bg-black/30 border-white/20 text-white"
-              />
-            </div>
-
-            {(metadata?.type === "season" || metadata?.type === "episode") && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="text-sm text-white/80">
-                    {metadata?.type === "episode"
-                      ? t("metaYaflix.episodeNumber")
-                      : t("metaYaflix.seasonNumber")}
-                  </label>
-                  <Input
-                    value={metadataForm.index}
-                    onChange={(e) =>
-                      setMetadataForm((prev) => ({ ...prev, index: e.target.value }))
-                    }
-                    className="bg-black/30 border-white/20 text-white"
-                  />
-                </div>
-                {metadata?.type === "episode" && (
-                  <div className="space-y-2">
-                    <label className="text-sm text-white/80">
-                      {t("metaYaflix.seasonNumber")}
-                    </label>
-                    <Input
-                      value={metadataForm.parentIndex}
-                      onChange={(e) =>
-                        setMetadataForm((prev) => ({
-                          ...prev,
-                          parentIndex: e.target.value,
-                        }))
-                      }
-                      className="bg-black/30 border-white/20 text-white"
-                    />
-                  </div>
-                )}
-              </div>
-            )}
-
-            {metadataSaveError && (
-              <p className="text-sm text-red-400">{metadataSaveError}</p>
-            )}
-
-            <div className="flex justify-end gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                className="border-white/30 bg-transparent text-white hover:bg-white/10 hover:text-white"
-                onClick={() => {
-                  setImageSaveError(null);
-                  setImageEditorOpen(true);
-                }}
-              >
-                {t("metaYaflix.manageImages")}
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                className="border-white/30 bg-transparent text-white hover:bg-white/10 hover:text-white"
-                onClick={() => setMetadataEditorOpen(false)}
-                disabled={savingMetadata}
-              >
-                {t("metaYaflix.cancel")}
-              </Button>
-              <Button
-                type="submit"
-                className="bg-plex hover:bg-plex/80 text-white"
-                disabled={savingMetadata}
-              >
-                {savingMetadata ? t("metaYaflix.saving") : t("metaYaflix.saveChanges")}
-              </Button>
-            </div>
-          </form>
-        </DialogContent>
-      </Dialog>
-      <Dialog open={isImageEditorOpen} onOpenChange={setImageEditorOpen}>
-        <DialogContent className="max-w-3xl bg-zinc-950 border-white/15 text-white">
-          <DialogTitle>{t("metaYaflix.imageDialogTitle")}</DialogTitle>
-          <DialogDescription className="text-white/70">
-            Cambia poster, fondo y miniatura.
-          </DialogDescription>
-          <form className="space-y-4" onSubmit={handleSaveImages}>
-            <div className="space-y-3 rounded-md border border-white/15 p-3 bg-black/20">
-              <p className="text-sm font-medium text-white/90">{t("metaYaflix.imageUrls")}</p>
-              <p className="text-xs text-white/60">
-                Pega URLs publicas. Plex descargara y aplicara las imagenes.
-              </p>
-              <div className="grid grid-cols-1 gap-3">
-                <div className="space-y-2">
-                  <label className="text-sm text-white/80">{t("metaYaflix.posterUrl")}</label>
-                  <Input
-                    value={metadataForm.posterUrl}
-                    onChange={(e) =>
-                      setMetadataForm((prev) => ({
-                        ...prev,
-                        posterUrl: e.target.value,
-                      }))
-                    }
-                    placeholder="https://..."
-                    className="bg-black/30 border-white/20 text-white"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm text-white/80">{t("metaYaflix.artUrl")}</label>
-                  <Input
-                    value={metadataForm.artUrl}
-                    onChange={(e) =>
-                      setMetadataForm((prev) => ({
-                        ...prev,
-                        artUrl: e.target.value,
-                      }))
-                    }
-                    placeholder="https://..."
-                    className="bg-black/30 border-white/20 text-white"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm text-white/80">{t("metaYaflix.thumbUrl")}</label>
-                  <Input
-                    value={metadataForm.thumbUrl}
-                    onChange={(e) =>
-                      setMetadataForm((prev) => ({
-                        ...prev,
-                        thumbUrl: e.target.value,
-                      }))
-                    }
-                    placeholder="https://..."
-                    className="bg-black/30 border-white/20 text-white"
-                  />
-                </div>
-              </div>
-              <div className="pt-2 border-t border-white/10">
-                <p className="text-xs text-white/70 mb-2">
-                  {t("metaYaflix.autoSuggestions")}
-                </p>
-                {loadingImageSuggestions ? (
-                  <p className="text-xs text-white/50">{t("metaYaflix.searchingImages")}</p>
-                ) : (
-                  <div className="space-y-3">
-                    <SuggestionStrip
-                      title="Posters sugeridos"
-                      items={imageSuggestions.poster}
-                      onSelect={(value) =>
-                        setMetadataForm((prev) => ({ ...prev, posterUrl: value }))
-                      }
-                    />
-                    <SuggestionStrip
-                      title="Fondos sugeridos"
-                      items={imageSuggestions.art}
-                      onSelect={(value) =>
-                        setMetadataForm((prev) => ({ ...prev, artUrl: value }))
-                      }
-                    />
-                    <SuggestionStrip
-                      title="Miniaturas sugeridas"
-                      items={imageSuggestions.thumb}
-                      onSelect={(value) =>
-                        setMetadataForm((prev) => ({ ...prev, thumbUrl: value }))
-                      }
-                    />
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {imageSaveError && (
-              <p className="text-sm text-red-400">{imageSaveError}</p>
-            )}
-
-            <div className="flex justify-end gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                className="border-white/30 bg-transparent text-white hover:bg-white/10 hover:text-white"
-                onClick={() => setImageEditorOpen(false)}
-                disabled={savingImages}
-              >
-                {t("metaYaflix.cancel")}
-              </Button>
-              <Button
-                type="submit"
-                className="bg-plex hover:bg-plex/80 text-white"
-                disabled={savingImages}
-              >
-                {savingImages ? t("metaYaflix.saving") : t("metaYaflix.saveImages")}
-              </Button>
-            </div>
-          </form>
-        </DialogContent>
-      </Dialog>
+      <MetadataEditorDialog
+        ratingKey={isMetadataEditorOpen && metadata ? metadata.ratingKey : null}
+        onClose={() => setMetadataEditorOpen(false)}
+      />
     </Dialog>
   );
 };

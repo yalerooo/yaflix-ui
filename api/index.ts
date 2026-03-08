@@ -1115,6 +1115,232 @@ export class ServerApi {
         return false;
       });
   }
+  /**
+   * Ask Plex to re-analyze media files (re-detects audio/subtitle streams).
+   * Works on shows, seasons, episodes, and movies.
+   */
+  static async analyze({ id }: { id: string }) {
+    return await axios
+      .put(
+        `${localStorage.getItem("server")}/library/metadata/${id}/analyze?${qs.stringify({ ...xprops() })}`,
+        null,
+        {
+          headers: {
+            "X-Plex-Token": localStorage.getItem("token") as string,
+            accept: "application/json",
+          },
+        },
+      )
+      .then((res) => res.status === 200)
+      .catch((err) => {
+        console.error(err);
+        return false;
+      });
+  }
+  /**
+   * Ask Plex to refresh metadata (re-fetch from agents like TMDB/TVDB).
+   */
+  static async refreshMetadata({ id }: { id: string }) {
+    return await axios
+      .put(
+        `${localStorage.getItem("server")}/library/metadata/${id}/refresh?${qs.stringify({ force: 1, ...xprops() })}`,
+        null,
+        {
+          headers: {
+            "X-Plex-Token": localStorage.getItem("token") as string,
+            accept: "application/json",
+          },
+        },
+      )
+      .then((res) => res.status === 200)
+      .catch((err) => {
+        console.error(err);
+        return false;
+      });
+  }
+  /**
+   * Permanently delete an item from the Plex library.
+   */
+  static async deleteItem({ id }: { id: string }) {
+    return await axios
+      .delete(
+        `${localStorage.getItem("server")}/library/metadata/${id}?${qs.stringify({ ...xprops() })}`,
+        {
+          headers: {
+            "X-Plex-Token": localStorage.getItem("token") as string,
+            accept: "application/json",
+          },
+        },
+      )
+      .then((res) => res.status === 200)
+      .catch((err) => {
+        console.error(err);
+        return false;
+      });
+  }
+  /**
+   * Search for metadata match candidates for an item.
+   */
+  static async searchMatches({ id, title, year }: { id: string; title: string; year?: number }) {
+    return await axios
+      .get<{ MediaContainer: { SearchResult?: Array<{ guid: string; name: string; year?: number; score?: string; lifespanEnded?: boolean; thumb?: string }> } }>(
+        `${localStorage.getItem("server")}/library/metadata/${id}/matches?${qs.stringify({
+          title,
+          ...(year ? { year } : {}),
+          language: "en",
+          ...xprops(),
+        })}`,
+        {
+          headers: {
+            "X-Plex-Token": localStorage.getItem("token") as string,
+            accept: "application/json",
+          },
+        },
+      )
+      .then((res) => res.data?.MediaContainer?.SearchResult ?? [])
+      .catch((err) => {
+        console.error(err);
+        return [];
+      });
+  }
+  /**
+   * Apply a metadata match to an item.
+   */
+  static async applyMatch({ id, guid, name }: { id: string; guid: string; name: string }) {
+    return await axios
+      .put(
+        `${localStorage.getItem("server")}/library/metadata/${id}/match?${qs.stringify({
+          guid,
+          name,
+          language: "en",
+          ...xprops(),
+        })}`,
+        null,
+        {
+          headers: {
+            "X-Plex-Token": localStorage.getItem("token") as string,
+            accept: "application/json",
+          },
+        },
+      )
+      .then((res) => res.status === 200)
+      .catch((err) => {
+        console.error(err);
+        return false;
+      });
+  }
+  /**
+   * Remove the metadata match for an item ("Fix incorrect match" / "Unmatch").
+   */
+  static async unmatch({ id }: { id: string }) {
+    return await axios
+      .delete(
+        `${localStorage.getItem("server")}/library/metadata/${id}/match?${qs.stringify({ ...xprops() })}`,
+        {
+          headers: {
+            "X-Plex-Token": localStorage.getItem("token") as string,
+            accept: "application/json",
+          },
+        },
+      )
+      .then((res) => res.status === 200)
+      .catch((err) => {
+        console.error(err);
+        return false;
+      });
+  }
+  /**
+   * Trigger Plex to create an optimized version of the item.
+   */
+  static async optimize({ id }: { id: string }) {
+    return await axios
+      .put(
+        `${localStorage.getItem("server")}/library/metadata/${id}/optimize?${qs.stringify({ ...xprops() })}`,
+        null,
+        {
+          headers: {
+            "X-Plex-Token": localStorage.getItem("token") as string,
+            accept: "application/json",
+          },
+        },
+      )
+      .then((res) => res.status === 200)
+      .catch((err) => {
+        console.error(err);
+        return false;
+      });
+  }
+  /**
+   * Add an item to the plex.tv watchlist using the item's guid.
+   */
+  static async addToWatchlist({ guid }: { guid: string }) {
+    return await axios
+      .put(
+        `https://metadata.provider.plex.tv/library/sections/watchlist/all?${qs.stringify({
+          ratingKey: guid,
+          ...xprops(),
+        })}`,
+        null,
+        {
+          headers: {
+            "X-Plex-Token": localStorage.getItem("token") as string,
+            accept: "application/json",
+          },
+        },
+      )
+      .then((res) => res.status === 200)
+      .catch((err) => {
+        console.error(err);
+        return false;
+      });
+  }
+  /**
+   * Remove an item from the plex.tv watchlist.
+   */
+  static async removeFromWatchlist({ guid }: { guid: string }) {
+    return await axios
+      .delete(
+        `https://metadata.provider.plex.tv/library/sections/watchlist/all?${qs.stringify({
+          ratingKey: guid,
+          ...xprops(),
+        })}`,
+        {
+          headers: {
+            "X-Plex-Token": localStorage.getItem("token") as string,
+            accept: "application/json",
+          },
+        },
+      )
+      .then((res) => res.status === 200)
+      .catch((err) => {
+        console.error(err);
+        return false;
+      });
+  }
+  /**
+   * Fetch play history for an item.
+   */
+  static async history({ id }: { id: string }) {
+    return await axios
+      .get<{ MediaContainer: { HistoryMetadata: Array<{ accountID: number; deviceID: number; historyKey: string; key: string; ratingKey: string; librarySectionID: number; parentKey?: string; grandparentKey?: string; title: string; grandparentTitle?: string; thumb?: string; viewedAt: number; accountKey: string }> } }>(
+        `${localStorage.getItem("server")}/status/sessions/history/all?${qs.stringify({
+          metadataItemID: id,
+          sort: "viewedAt:desc",
+          ...xprops(),
+        })}`,
+        {
+          headers: {
+            "X-Plex-Token": localStorage.getItem("token") as string,
+            accept: "application/json",
+          },
+        },
+      )
+      .then((res) => res.data?.MediaContainer?.HistoryMetadata ?? null)
+      .catch((err) => {
+        console.error(err);
+        return null;
+      });
+  }
   static async discoverMetadata({ guid }: { guid: string }) {
     return await axios
       .get(

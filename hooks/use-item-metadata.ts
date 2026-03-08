@@ -8,6 +8,10 @@ const useItemMetadata = (mid: string | null | undefined) => {
       if (!mid) return null;
       return ServerApi.metadata({ id: mid });
     },
+    // Never cache metadata: always fetch fresh from Plex so audio/subtitle
+    // streams reflect the latest file (e.g. after replacing a video).
+    staleTime: 0,
+    gcTime: 0,
   });
 
   return { metadata: metadata.data, loading: metadata.isLoading };
