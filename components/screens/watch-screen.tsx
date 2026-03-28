@@ -1304,7 +1304,7 @@ export const WatchScreen: FC<{ watch: string | undefined }> = ({ watch }) => {
                     </div>
                   )}
                   
-                  {/* Subtitles Submenu */}}}
+                  {/* Subtitles Submenu */}
                   {settingsView === 'subtitles' && (
                     <div className="py-2">
                       <div className="px-4 py-3 flex items-center gap-3 border-b border-white/10">
