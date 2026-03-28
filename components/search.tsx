@@ -1,4 +1,3 @@
-import { Button } from "@/components/ui/button";
 import { SearchIcon } from "lucide-react";
 import { useSearch } from "@/components/search-provider";
 import { useSettings } from "@/components/settings-provider";
@@ -8,18 +7,18 @@ export const Search = () => {
   const { t } = useSettings();
 
   return (
-    <Button
-      size="sm"
-      className="transition text-left justify-between px-2 gap-2"
+    <button
+      type="button"
+      className="backdrop-blur-lg bg-white/10 border border-white/20 rounded-full px-4 py-2 hover:bg-white/20 hover:scale-[1.03] active:scale-[0.97] transition-all duration-200 shadow-lg text-sm font-semibold text-white/90 hover:text-white flex items-center gap-2 w-full justify-between"
       onClick={() => onOpen(true)}
     >
-      <div className="flex flex-row gap-2">
-        <SearchIcon />
-        <p>{t("search.openLibraries")}</p>
+      <div className="flex flex-row gap-2 items-center">
+        <SearchIcon className="w-4 h-4" />
+        <span>{t("search.openLibraries")}</span>
       </div>
-      <kbd className="group-hover:text-primary transition pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100">
+      <kbd className="pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border border-white/20 bg-white/5 px-1.5 font-mono text-[10px] font-medium text-white/50">
         <span className="text-xs">⌘</span>K
       </kbd>
-    </Button>
+    </button>
   );
 };

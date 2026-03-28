@@ -72,12 +72,13 @@ export const Appbar = () => {
     <>
       <div
         className={cn(
-          `flex justify-center items-center fixed top-0 h-[${APPBAR_HEIGHT}] w-full z-[45] transition duration-500 py-4`,
+          `flex justify-center items-center fixed top-0 h-[${APPBAR_HEIGHT}] w-full z-[45] transition-all duration-500 py-4`,
+          !isAtTop && "bg-black/60 backdrop-blur-xl border-b border-white/10",
         )}
       >
         <div className="flex items-center gap-3">
           {/* Navigation Links - Glassmorphic Capsules */}
-          <nav className="hidden md:flex items-center gap-3">
+          <nav className="hidden md:flex items-center gap-3" style={{ willChange: "transform" }}>
             <Link
               href="/"
               className={cn(
@@ -165,7 +166,7 @@ export const Appbar = () => {
                 </Button>
               </SheetClose>
             </SheetHeader>
-            <div className="px-4 pt-4 pb-5 flex flex-col gap-4 overflow-y-auto">
+            <div className="px-4 pt-4 pb-5 flex flex-col gap-4 overflow-y-auto settings-scroll">
               {user && (
                 <div className="rounded-2xl border border-white/10 bg-white/5 p-3 flex items-center gap-3">
                   <Avatar className="h-10 w-10 ring-1 ring-white/20">
@@ -228,7 +229,9 @@ export const Appbar = () => {
                                   : "inactive"
                               }
                             >
-                              <House className="h-4 w-4" />
+                              {section.type === "movie" && <Film className="h-4 w-4" />}
+                              {section.type === "show" && <TvMinimal className="h-4 w-4" />}
+                              {!["movie", "show"].includes(section.type) && <LayoutGrid className="h-4 w-4" />}
                               <span className="truncate">{t("appbar.browse")}</span>
                             </Link>
                           </Button>
@@ -265,7 +268,7 @@ export const Appbar = () => {
         {/* User Avatar */}
         {user && (
           <Popover>
-            <PopoverTrigger className="backdrop-blur-lg bg-white/10 border border-white/20 rounded-full p-1 hover:bg-white/20 transition-all duration-200 shadow-lg">
+            <PopoverTrigger className="backdrop-blur-lg bg-white/10 border border-white/20 rounded-full p-1 hover:bg-white/20 transition-all duration-200 shadow-lg data-[state=open]:ring-2 data-[state=open]:ring-white/40 data-[state=open]:bg-white/20">
               <Avatar>
                 <AvatarImage src={user.thumb} />
                 <AvatarFallback>

@@ -20,7 +20,7 @@ const CarouselItem = forwardRef<
     left: 0,
     height: 0,
   });
-  const d = 350;
+  const d = 220;
 
   useEffect(() => {
     if (!itemRef.current) return;

@@ -13,7 +13,7 @@ export const CollectionPreviewItem = forwardRef<
   return (
     <button
       ref={ref}
-      className="relative text-left"
+      className="relative text-left group transition-transform duration-200 hover:scale-[1.03]"
       onClick={() => {
         router.push(
           `${pathname}?${qs.stringify({
@@ -26,7 +26,7 @@ export const CollectionPreviewItem = forwardRef<
     >
       <img
         loading="lazy"
-        className="w-full object-cover aspect-[9/14] top-0 rounded"
+        className="w-full object-cover aspect-[9/14] top-0 rounded-xl transition-[filter] duration-200 group-hover:brightness-110"
         src={getPosterImage(item.thumb, false, true)}
         alt="season poster"
       />

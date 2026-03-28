@@ -25,7 +25,7 @@ export const EpisodePreviewItem: FC<{
       >
         {item.index}
       </p>
-      <div className="mr-4 hidden sm:block sm:min-w-[200px] sm:w-[200px] md:min-w-[250px] md:w-[250px] relative">
+      <div className="mr-4 sm:min-w-[200px] sm:w-[200px] md:min-w-[250px] md:w-[250px] min-w-[80px] w-[80px] relative flex-shrink-0">
         <img
           loading="lazy"
           className="rounded aspect-video object-cover w-full"
@@ -49,7 +49,7 @@ export const EpisodePreviewItem: FC<{
           </span>
           <span>{duration?.total}m</span>
         </p>
-        <p className="line-clamp-2">{item.summary}</p>
+        <p className="line-clamp-2 text-sm text-muted-foreground font-normal mt-1">{item.summary}</p>
       </div>
     </button>
   );

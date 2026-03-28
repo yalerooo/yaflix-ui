@@ -32,7 +32,6 @@ import {
 import { useHubItem, useItemLanguages } from "@/hooks/use-hub-item";
 import { usePreviewMuted } from "@/hooks/use-preview-muted";
 import qs from "qs";
-import { Skeleton } from "@/components/ui/skeleton";
 import { CarouselContext } from "@/components/carousel";
 import { cn } from "@/lib/utils";
 import { getSeriesLogo } from "@/lib/fanart";
@@ -47,6 +46,7 @@ import {
   fetchTvShowArtwork,
 } from "@/lib/fanart";
 import { useSettings } from "@/components/settings-provider";
+import { useServer } from "@/components/server-provider";
 import { MetadataEditorDialog } from "@/components/metadata-editor-dialog";
 
 function plexImage(path: string | undefined, width?: number, height?: number): string {
@@ -76,6 +76,7 @@ export const MetaScreenYaflix: FC = () => {
   const queryClient = useQueryClient();
   const { user } = useSession();
   const { t } = useSettings();
+  const { libraries, disabledLibraries } = useServer();
   const mid = searchParams.get("mid");
   const { close } = useContext(CarouselContext);
   const [activeTab, setActiveTab] = useState("general");
@@ -513,6 +514,12 @@ export const MetaScreenYaflix: FC = () => {
   }, [mid]);
 
   useEffect(() => {
+    if (!info.coverImage) return;
+    const img = new window.Image();
+    img.src = info.coverImage;
+  }, [info.coverImage]);
+
+  useEffect(() => {
     if (!metadata) return;
     if (info.isEpisode || info.isMovie) {
       if (
@@ -923,11 +930,12 @@ export const MetaScreenYaflix: FC = () => {
         {/* Background — direct child of scroll container so sticky works */}
         <div className="sticky top-0 h-screen w-full -mb-[100vh] z-0 pointer-events-none overflow-hidden">
           <div
-            className="absolute inset-[-20px] bg-cover bg-center blur-md opacity-35"
+            className="absolute inset-[-20px] bg-cover bg-center blur-md transition-opacity duration-700"
             style={{
               backgroundImage: metadata?.art
                 ? `url(${info.coverImage})`
                 : undefined,
+              opacity: metadata?.art ? 0.35 : 0,
             }}
           />
           <div className="absolute inset-0 bg-black/50" />
@@ -944,28 +952,27 @@ export const MetaScreenYaflix: FC = () => {
               >
                 {t("libraryScreen.home")}
               </a>
-              <a
-                className="backdrop-blur-lg bg-white/10 border border-white/20 rounded-full px-6 py-2 text-white/90 hover:text-white hover:bg-white/20 font-semibold text-sm transition-all duration-200 shadow-lg"
-                href="/browse/2"
-              >
-                {t("libraryScreen.movies")}
-              </a>
-              <a
-                className="backdrop-blur-lg bg-white/10 border border-white/20 rounded-full px-6 py-2 text-white/90 hover:text-white hover:bg-white/20 font-semibold text-sm transition-all duration-200 shadow-lg"
-                href="/browse/1"
-              >
-                {t("libraryScreen.anime")}
-              </a>
+              {libraries
+                .filter((lib) => !disabledLibraries[lib.title])
+                .map((lib) => (
+                  <a
+                    key={lib.key}
+                    className="backdrop-blur-lg bg-white/10 border border-white/20 rounded-full px-6 py-2 text-white/90 hover:text-white hover:bg-white/20 font-semibold text-sm transition-all duration-200 shadow-lg"
+                    href={`/browse/${lib.key}`}
+                  >
+                    {lib.title}
+                  </a>
+                ))}
             </nav>
             
-            {/* Mobile Menu Button */}
-            <button className="block md:hidden backdrop-blur-lg bg-white/10 border border-white/20 rounded-full p-2 text-white hover:bg-white/20 transition-all duration-200 shadow-lg">
-              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="4" x2="20" y1="12" y2="12"></line>
-                <line x1="4" x2="20" y1="6" y2="6"></line>
-                <line x1="4" x2="20" y1="18" y2="18"></line>
-              </svg>
-            </button>
+            {/* Mobile close button (replaces dead hamburger) */}
+            <a
+              href="/"
+              className="block md:hidden backdrop-blur-lg bg-white/10 border border-white/20 rounded-full p-2 text-white hover:bg-white/20 transition-all duration-200 shadow-lg"
+              aria-label="Home"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </a>
             
             {/* Close Button */}
             <button onClick={handleClose} className="backdrop-blur-lg bg-white/10 border border-white/20 rounded-full p-2 text-white hover:bg-white/20 hover:text-white transition-all duration-200 shadow-lg" title={t("libraryScreen.close")}>
@@ -974,20 +981,28 @@ export const MetaScreenYaflix: FC = () => {
           </div>
         </div>
 
-        <div className="relative min-h-screen w-full min-w-0 z-10 -mt-[4.5rem]">
+        <div
+          className="relative min-h-screen w-full min-w-0 z-10 -mt-[4.5rem] transition-opacity duration-700"
+          style={{ opacity: metadata ? 1 : 0 }}
+        >
 
           {/* Hero Section */}
           <div className="relative z-10 pb-16">
             <div className="relative h-[500px] sm:h-[600px] md:h-[700px] mb-16 px-4 sm:px-8 md:px-12">
               {/* Main Art Image - Centered with rounded corners */}
-              <div
-                className="absolute top-12 sm:top-16 md:top-20 left-0 right-0 bottom-0 mx-4 sm:mx-16 md:mx-24 lg:mx-32 bg-cover bg-center rounded-[40px]"
-                style={{
-                  backgroundImage: metadata?.art
-                    ? `url(${info.coverImage})`
-                    : undefined,
-                }}
-              >
+              <div className="absolute top-12 sm:top-16 md:top-20 left-0 right-0 bottom-0 mx-4 sm:mx-16 md:mx-24 lg:mx-32 rounded-[40px] overflow-hidden bg-white/5">
+                {info.coverImage && (
+                  <img
+                    src={info.coverImage}
+                    alt=""
+                    fetchPriority="high"
+                    loading="eager"
+                    decoding="async"
+                    className="absolute inset-0 w-full h-full object-cover transition-opacity duration-700"
+                    style={{ opacity: 0 }}
+                    onLoad={(e) => { (e.currentTarget as HTMLImageElement).style.opacity = "1"; }}
+                  />
+                )}
                 <div className="absolute inset-0 bg-gradient-to-b from-transparent via-black/10 to-black/40 rounded-[40px]" />
                 <div className="absolute top-0 left-0 right-0 h-1/3 bg-gradient-to-b from-black/60 to-transparent rounded-t-[40px]" />
               </div>
@@ -997,12 +1012,14 @@ export const MetaScreenYaflix: FC = () => {
                 <div className="max-w-2xl">
                   {/* Series Logo from fanart.tv */}
                   {(fanartLogo || metadata?.thumb) && (
-                    <div className="mb-3 sm:mb-5">
+                    <div className="mb-3 sm:mb-5 animate-in fade-in slide-in-from-bottom-3 duration-500">
                       {fanartLogo ? (
                         <img
                           src={fanartLogo}
                           alt={metadata?.title}
-                          className="max-w-xs sm:max-w-md md:max-w-lg max-h-28 sm:max-h-32 md:max-h-36 object-contain drop-shadow-[0_4px_20px_rgba(0,0,0,0.8)]"
+                          className="max-w-xs sm:max-w-md md:max-w-lg max-h-28 sm:max-h-32 md:max-h-36 object-contain drop-shadow-[0_4px_20px_rgba(0,0,0,0.8)] transition-opacity duration-500"
+                          style={{ opacity: 0 }}
+                          onLoad={(e) => { (e.currentTarget as HTMLImageElement).style.opacity = "1"; }}
                         />
                       ) : (
                         <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-white drop-shadow-[0_4px_20px_rgba(0,0,0,0.8)]">
@@ -1013,35 +1030,40 @@ export const MetaScreenYaflix: FC = () => {
                   )}
 
                   {/* Metadata badges */}
-                  <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-white/90 text-sm sm:text-base mb-3 sm:mb-4">
+                  <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-sm sm:text-base mb-3 sm:mb-4 animate-in fade-in slide-in-from-bottom-2 duration-500 delay-100">
                     {info.isEpisode && metadata?.parentIndex && (
-                      <span className="font-semibold">
-                        Temporada {metadata.parentIndex}
+                      <span className="font-bold text-white">
+                        T{metadata.parentIndex}
                       </span>
                     )}
                     {info.isEpisode && metadata?.index && (
-                      <span className="font-semibold">
-                        Episodio {metadata.index}
-                      </span>
+                      <>
+                        <span className="text-white/30">·</span>
+                        <span className="font-bold text-white">E{metadata.index}</span>
+                      </>
                     )}
                     {metadata?.year && (
-                      <span className="font-medium">{metadata.year}</span>
-                    )}
-                    {metadata?.contentRating && (
-                      <span className="px-2 py-0.5 border border-white/50 rounded text-sm font-medium">
-                        {metadata.contentRating}
-                      </span>
+                      <>
+                        {(info.isEpisode) && <span className="text-white/30">·</span>}
+                        <span className="font-semibold text-white">{metadata.year}</span>
+                      </>
                     )}
                     {metadata?.duration && (
-                      <span className="font-medium">
-                        {Math.round(metadata.duration / 60000)}m
+                      <>
+                        <span className="text-white/30">·</span>
+                        <span className="font-semibold text-white">{Math.round(metadata.duration / 60000)}m</span>
+                      </>
+                    )}
+                    {metadata?.contentRating && (
+                      <span className="glass-pill rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white/65">
+                        {metadata.contentRating}
                       </span>
                     )}
                   </div>
 
                   {/* Genres */}
                   {metadata?.Genre && metadata.Genre.length > 0 && (
-                    <div className="flex flex-wrap gap-2 mb-4 sm:mb-6">
+                    <div className="flex flex-wrap gap-2 mb-4 sm:mb-6 animate-in fade-in slide-in-from-bottom-2 duration-500 delay-150">
                       {metadata.Genre.map((genre) => (
                         <span
                           key={genre.id}
@@ -1124,7 +1146,7 @@ export const MetaScreenYaflix: FC = () => {
                   )}
 
                   {/* Play Button */}
-                  <div className="flex flex-wrap gap-3 sm:gap-4 items-center">
+                  <div className="flex flex-wrap gap-3 sm:gap-4 items-center animate-in fade-in slide-in-from-bottom-2 duration-500 delay-200">
                     <Button
                       onClick={handlePlay}
                       variant="default"
@@ -1203,31 +1225,33 @@ export const MetaScreenYaflix: FC = () => {
 
             {/* Tabs - Sticky */}
             <div className="mb-6 sm:mb-8">
-              <div className="px-4 sm:px-8 md:px-16 lg:px-32 flex gap-4 sm:gap-8 items-center overflow-x-auto no-scrollbar">
+              <div className="px-4 sm:px-8 md:px-16 lg:px-32 flex gap-4 sm:gap-8 items-center overflow-x-auto no-scrollbar border-b border-white/10">
                 <button
                   onClick={() => setActiveTab("general")}
                   className={cn(
-                    "px-3 sm:px-6 py-3 sm:py-4 text-sm sm:text-base font-semibold transition-all relative whitespace-nowrap",
-                    activeTab === "general" ? "text-white" : "text-white/80 hover:text-white"
+                    "px-3 sm:px-6 py-3 sm:py-4 text-sm sm:text-base font-semibold relative whitespace-nowrap transition-colors duration-200",
+                    activeTab === "general" ? "text-white" : "text-white/50 hover:text-white/80"
                   )}
                 >
                   {t("metaYaflix.general")}
-                  {activeTab === "general" && (
-                    <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-plex" />
-                  )}
+                  <div
+                    className="absolute bottom-0 left-0 right-0 h-0.5 bg-plex transition-transform duration-300 ease-out origin-left"
+                    style={{ transform: activeTab === "general" ? "scaleX(1)" : "scaleX(0)" }}
+                  />
                 </button>
                 {!info.isEpisode && (
                   <button
                     onClick={() => setActiveTab("episodes")}
                     className={cn(
-                      "px-3 sm:px-6 py-3 sm:py-4 text-sm sm:text-base font-semibold transition-all relative whitespace-nowrap",
-                      activeTab === "episodes" ? "text-white" : "text-white/80 hover:text-white"
+                      "px-3 sm:px-6 py-3 sm:py-4 text-sm sm:text-base font-semibold relative whitespace-nowrap transition-colors duration-200",
+                      activeTab === "episodes" ? "text-white" : "text-white/50 hover:text-white/80"
                     )}
                   >
                     {t("metaYaflix.allEpisodes")}
-                    {activeTab === "episodes" && (
-                      <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-plex" />
-                    )}
+                    <div
+                      className="absolute bottom-0 left-0 right-0 h-0.5 bg-plex transition-transform duration-300 ease-out origin-left"
+                      style={{ transform: activeTab === "episodes" ? "scaleX(1)" : "scaleX(0)" }}
+                    />
                   </button>
                 )}
                 {info.isEpisode && metadata?.grandparentRatingKey && (
@@ -1237,20 +1261,21 @@ export const MetaScreenYaflix: FC = () => {
                         scroll: false,
                       });
                     }}
-                    className="px-3 sm:px-6 py-3 sm:py-4 text-sm sm:text-base font-semibold transition-all relative whitespace-nowrap text-white/80 hover:text-white"
+                    className="px-3 sm:px-6 py-3 sm:py-4 text-sm sm:text-base font-semibold relative whitespace-nowrap transition-colors duration-200 text-white/50 hover:text-white/80"
                   >
                     {t("metaYaflix.moreEpisodes")}
-                    <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-white/30" />
+                    <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-white/20" style={{ transform: "scaleX(0)" }} />
                   </button>
                 )}
               </div>
             </div>
 
             {/* Content Sections */}
-            <div className="px-4 sm:px-8 md:px-16 lg:px-32 space-y-8 sm:space-y-10 min-w-0">
-              {/* Synopsis */}
+            <div className="px-4 sm:px-8 md:px-16 lg:px-32 min-w-0">
+              <div key={`${mid}-${activeTab}`} className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+              {/* General tab */}
               {activeTab === "general" && (
-                <>
+              <div className="space-y-8 sm:space-y-10">
                   <div className="rounded-xl sm:rounded-2xl p-4 sm:p-6 backdrop-blur-lg bg-white/10 border border-white/20 shadow-xl">
                     <h2 className="text-xl sm:text-2xl font-bold text-white mb-3 sm:mb-4">
                       {t("metaYaflix.synopsis")}
@@ -1307,10 +1332,11 @@ export const MetaScreenYaflix: FC = () => {
                             key={s.ratingKey}
                             onClick={() => setSelectedSeason(s.ratingKey)}
                             className={cn(
-                              "px-4 sm:px-6 py-2 sm:py-3 rounded-lg whitespace-nowrap transition-all font-semibold text-sm sm:text-base flex-shrink-0",
+                              "px-4 sm:px-6 py-2 sm:py-3 rounded-lg whitespace-nowrap border font-semibold text-sm sm:text-base flex-shrink-0",
+                              "transition-[background-color,color,box-shadow,border-color] duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]",
                               selectedSeason === s.ratingKey || (!selectedSeason && s.ratingKey === showChildren[0].ratingKey)
-                                ? "bg-plex text-white shadow-lg shadow-plex/30"
-                                : "bg-white/5 text-white/60 hover:bg-white/10 hover:text-white border border-white/10"
+                                ? "bg-plex text-white border-plex shadow-lg shadow-plex/30"
+                                : "bg-white/5 text-white/60 hover:bg-white/10 hover:text-white border-white/10"
                             )}
                           >
                             {localizeSeasonTitle(s.title)}
@@ -1344,16 +1370,7 @@ export const MetaScreenYaflix: FC = () => {
                           className="overflow-x-auto overflow-y-hidden no-scrollbar scroll-smooth"
                         >
                           <div className="flex gap-4 pb-4">
-                            {loadingSeasonChildren ? (
-                              Array.from({ length: 5 }).map((_, i) => (
-                                <div key={i} className="w-[220px] sm:w-[250px] md:w-[280px] lg:w-[300px] flex-shrink-0 flex-grow-0">
-                                  <Skeleton className="w-full aspect-video rounded-xl mb-4" />
-                                  <Skeleton className="h-6 w-3/4 mb-2" />
-                                  <Skeleton className="h-4 w-full" />
-                                </div>
-                              ))
-                            ) : (
-                              seasonChildren?.map((episode) => (
+                            {seasonChildren?.map((episode) => (
                                 <div
                                   key={episode.ratingKey}
                                   className="w-[220px] sm:w-[250px] md:w-[280px] lg:w-[300px] flex-shrink-0 flex-grow-0"
@@ -1420,18 +1437,18 @@ export const MetaScreenYaflix: FC = () => {
                                     </a>
                                   </div>
                                 </div>
-                              ))
-                            )}
+                              ))}
                           </div>
                         </div>
                       </div>
                     </div>
                   )}
-                </>
+              </div>
               )}
 
               {/* All Episodes Tab */}
-              {activeTab === "episodes" && info.isShow && (
+              {info.isShow && activeTab === "episodes" && (
+              <div className="space-y-6">
                 <div>
                   {/* Season selector */}
                   {showChildren && showChildren.length > 0 && (
@@ -1441,10 +1458,11 @@ export const MetaScreenYaflix: FC = () => {
                           key={s.ratingKey}
                           onClick={() => setSelectedSeason(s.ratingKey)}
                           className={cn(
-                            "px-4 sm:px-6 py-2 sm:py-3 rounded-lg whitespace-nowrap transition-all font-semibold text-sm sm:text-base flex-shrink-0",
+                            "px-4 sm:px-6 py-2 sm:py-3 rounded-lg whitespace-nowrap border font-semibold text-sm sm:text-base flex-shrink-0",
+                            "transition-[background-color,color,box-shadow,border-color] duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]",
                             selectedSeason === s.ratingKey || (!selectedSeason && s.ratingKey === showChildren[0].ratingKey)
-                              ? "bg-plex text-white shadow-lg shadow-plex/30"
-                              : "bg-white/5 text-white/60 hover:bg-white/10 hover:text-white border border-white/10"
+                              ? "bg-plex text-white border-plex shadow-lg shadow-plex/30"
+                              : "bg-white/5 text-white/60 hover:bg-white/10 hover:text-white border-white/10"
                           )}
                         >
                           {localizeSeasonTitle(s.title)}
@@ -1455,19 +1473,7 @@ export const MetaScreenYaflix: FC = () => {
 
                   {/* Episodes list - vertical */}
                   <div className="space-y-4">
-                    {loadingSeasonChildren ? (
-                      Array.from({ length: 5 }).map((_, i) => (
-                        <div key={i} className="flex gap-4 animate-pulse">
-                          <Skeleton className="w-48 aspect-video rounded-lg flex-shrink-0" />
-                          <div className="flex-1 space-y-2 py-2">
-                            <Skeleton className="h-5 w-1/3" />
-                            <Skeleton className="h-4 w-full" />
-                            <Skeleton className="h-4 w-2/3" />
-                          </div>
-                        </div>
-                      ))
-                    ) : (
-                      seasonChildren?.map((episode) => (
+                    {seasonChildren?.map((episode) => (
                         <div
                           key={episode.ratingKey}
                           className="flex rounded-xl bg-white/5 transition-all duration-200 overflow-hidden border border-white/5"
@@ -1521,11 +1527,13 @@ export const MetaScreenYaflix: FC = () => {
                             </p>
                           </a>
                         </div>
-                      ))
-                    )}
+                      ))}
                   </div>
                 </div>
+              </div>
               )}
+
+              </div>{/* end key={activeTab} */}
 
               {/* Related Content */}
               {relatedItems && relatedItems.length > 0 && (

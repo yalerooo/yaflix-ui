@@ -13,10 +13,10 @@ const MetadataPreviewItem = forwardRef<
   return (
     <div
       ref={ref}
-      className="w-full h-full flex flex-col hover:outline rounded overflow-hidden bg-alternative"
+      className="w-full h-full flex flex-col rounded-2xl overflow-hidden bg-white/5 backdrop-blur-md border border-white/10 hover:ring-1 hover:ring-white/20 hover:scale-[1.02] transition-all duration-200"
     >
       <button type="button" onClick={() => open()}>
-        <img className="aspect-video" src={getCoverImage(item.art)} />
+        <img className="aspect-video w-full object-cover" src={getCoverImage(item.art)} />
         <div className="flex flex-col flex-1 gap-2 text-left p-4">
           {isEpisode && (
             <p className="font-bold text-muted-foreground line-clamp-3 text-sm">
@@ -49,19 +49,19 @@ const MetadataPreviewItem = forwardRef<
               <div className="flex-1" />
               <div className="flex items-center font-semibold gap-2 w-full">
                 {item.contentRating && (
-                  <p className="border border-muted-foreground rounded-sm px-1 text-sm">
+                  <span className="glass-pill rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white/70">
                     {item.contentRating}
-                  </p>
+                  </span>
                 )}
                 {quality && (
-                  <p className="border border-plex text-plex rounded-sm px-1 text-sm">
+                  <span className="glass-pill rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-plex">
                     {quality}
-                  </p>
+                  </span>
                 )}
                 {item?.editionTitle && (
-                  <p className="border border-plex rounded-sm px-1 text-plex text-sm">
+                  <span className="glass-pill rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-plex">
                     {item.editionTitle}
-                  </p>
+                  </span>
                 )}
                 <div className="flex-1"></div>
                 {item.year && <p className="px-1 text-sm">{item.year}</p>}

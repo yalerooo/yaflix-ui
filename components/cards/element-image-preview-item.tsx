@@ -1,4 +1,4 @@
-import { FC } from "react";
+import { FC, useState } from "react";
 import { Progress } from "@/components/ui/progress";
 import { HubItemInfo } from "@/hooks/use-hub-item";
 import { ClassNameValue } from "tailwind-merge";
@@ -32,6 +32,7 @@ export const ElementImagePreviewItem: FC<{
 }) => {
   const { isEpisode, isMovie, isSeason, play, open } = info;
   const { disableClearLogo } = useSettings();
+  const [imgLoaded, setImgLoaded] = useState(false);
 
   return (
     <button
@@ -47,11 +48,16 @@ export const ElementImagePreviewItem: FC<{
       }}
       disabled={disabled}
     >
+      <div className="absolute inset-0 bg-white/5 animate-shimmer" style={{ display: imgLoaded ? "none" : undefined }} />
       <img
-        className="absolute inset-0 object-cover w-full h-full"
+        className={cn(
+          "absolute inset-0 object-cover w-full h-full transition-[transform,opacity] duration-300 group-hover:scale-105",
+          imgLoaded ? "opacity-100" : "opacity-0"
+        )}
         src={image}
         alt=""
         loading="lazy"
+        onLoad={() => setImgLoaded(true)}
       />
       {isOnDeck && clearLogo && !disableClearLogo && (
         <>

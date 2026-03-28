@@ -98,7 +98,10 @@ export const WatchScreen: FC<{ watch: string | undefined }> = ({ watch }) => {
   const [showControls, setShowControls] = useState(true);
   const [pendingRefresh, setPendingRefresh] = useState(false);
   const [url, setUrl] = useState<string>("");
-  const [nextUrl, setNextUrl] = useState<string>("");
+  const [playerKey, setPlayerKey] = useState(0);
+  const isReloading = useRef(false);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const dashInstanceRef = useRef<any>(null);
   const [isLoadingMetadata, setIsLoadingMetadata] = useState<boolean>(false);
   const [isPipAvailable, setIsPipAvailable] = useState<boolean>(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -268,12 +271,33 @@ export const WatchScreen: FC<{ watch: string | undefined }> = ({ watch }) => {
     };
   }, [ready, url]);
 
-  useEffect(() => {
-    if (!url && !!nextUrl) {
-      setUrl(nextUrl);
-      setNextUrl("");
+  const reloadPlayer = useCallback((newUrl: string) => {
+    isReloading.current = true;
+    // 1. Reset the stored DASH.js instance to stop all pending XHR requests.
+    if (dashInstanceRef.current) {
+      try {
+        if (typeof dashInstanceRef.current.reset === 'function') {
+          dashInstanceRef.current.reset();
+        }
+      } catch { /* ignore */ }
+      dashInstanceRef.current = null;
     }
-  }, [url, nextUrl]);
+    // 2. Nuke every <video> element's media pipeline so MSE buffers stop playing.
+    document.querySelectorAll('video').forEach((v) => {
+      try {
+        v.muted = true;
+        (v as HTMLVideoElement).volume = 0;
+        v.pause();
+        // Detach MSE srcObject if present, then also clear src and reset element.
+        if ((v as any).srcObject !== undefined) (v as any).srcObject = null;
+        v.removeAttribute('src');
+        v.load(); // Cancels all pending buffering/decoding (HTML spec §4.8.11.5)
+      } catch { /* ignore */ }
+    });
+    // 3. Increment key (unmounts old player) and set new URL atomically.
+    setPlayerKey((k) => k + 1);
+    setUrl(newUrl);
+  }, []);
 
   const video = useMemo(() => {
     if (!ready) return null;
@@ -281,7 +305,7 @@ export const WatchScreen: FC<{ watch: string | undefined }> = ({ watch }) => {
     return document.querySelector("video");
   }, [ready]);
 
-  const loaded = () =>
+  const loaded = (offsetMs = 0) =>
     `${localStorage.getItem("server")}/video/:/transcode/universal/start.mpd?${qs.stringify(
       {
         ...streamprops({
@@ -294,6 +318,7 @@ export const WatchScreen: FC<{ watch: string | undefined }> = ({ watch }) => {
             }),
           },
         }),
+        ...(offsetMs > 0 ? { offset: Math.floor(offsetMs) } : {}),
       },
     )}`;
 
@@ -622,6 +647,7 @@ export const WatchScreen: FC<{ watch: string | undefined }> = ({ watch }) => {
             className={`absolute inset-0 ${showControls ? "" : "cursor-none"}`}
           >
             <ReactPlayer
+              key={playerKey}
               ref={player}
               playing={playing}
               volume={(isMuted ? 0 : volume) / 100}
@@ -659,6 +685,11 @@ export const WatchScreen: FC<{ watch: string | undefined }> = ({ watch }) => {
                 }
               }}
               onReady={() => {
+                isReloading.current = false;
+                // Capture the live DASH.js instance so we can reset it on reload.
+                dashInstanceRef.current =
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  (player.current as any)?.getInternalPlayer?.('dash') ?? null;
                 if (!player.current) return;
                 setReady(true);
                 setShowError(false);
@@ -683,6 +714,7 @@ export const WatchScreen: FC<{ watch: string | undefined }> = ({ watch }) => {
                 setBuffered(progress.loadedSeconds);
               }}
               onPause={() => {
+                if (isReloading.current) return;
                 setPlaying(false);
                 if (playing) {
                   timeline("paused");
@@ -702,6 +734,7 @@ export const WatchScreen: FC<{ watch: string | undefined }> = ({ watch }) => {
                 setBuffering(false);
               }}
               onError={(err) => {
+                if (isReloading.current) return;
                 console.error(err);
                 if (err?.error?.message) {
                   if (
@@ -765,7 +798,7 @@ export const WatchScreen: FC<{ watch: string | undefined }> = ({ watch }) => {
                 },
               }}
               controls={false}
-              stopOnUnmount={false}
+              stopOnUnmount={true}
               url={url}
               width="100%"
               height="100%"
@@ -773,7 +806,7 @@ export const WatchScreen: FC<{ watch: string | undefined }> = ({ watch }) => {
             />
           </div>
           <div
-            className={`sticky top-0 w-full flex flex-row items-center gap-2 sm:gap-4 p-3 sm:p-6 bg-background/80 ${showControls ? "" : "-translate-y-full"} transition`}
+            className={`sticky top-0 w-full flex flex-row items-center gap-2 sm:gap-4 p-3 sm:p-6 bg-background/80 transition-transform duration-300 ease-in-out ${showControls ? "" : "-translate-y-full"}`}
           >
             <button
               onClick={() => back()}
@@ -835,57 +868,53 @@ export const WatchScreen: FC<{ watch: string | undefined }> = ({ watch }) => {
           </div>
           <div className="flex-1" />
           <div
-            className={`flex flex-row p-3 sm:p-6 justify-end z-50 ${showSkip ? "" : "hidden"} transition`}
+            className={`flex flex-row p-3 sm:p-6 justify-end z-50 transition-opacity duration-300 ${showSkip ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"}`}
             autoFocus
           >
-            {showSkip && (
-              <Button
-                type="button"
-                variant="outline"
-                id="button-skipintro"
-                autoFocus
-                onClick={() => {
-                  if (!player.current || !metadata?.Marker) return;
-                  const time =
-                    metadata.Marker?.filter(
-                      (marker) =>
-                        marker.startTimeOffset / 1000 <= progress &&
-                        marker.endTimeOffset / 1000 >= progress &&
-                        marker.type === "intro",
-                    )[0].endTimeOffset / 1000;
-                  player.current.seekTo(time + 1);
-                }}
-              >
-                <SkipForward /> Skip Intro
-              </Button>
-            )}
+            <Button
+              type="button"
+              variant="outline"
+              id="button-skipintro"
+              autoFocus={showSkip}
+              onClick={() => {
+                if (!player.current || !metadata?.Marker) return;
+                const time =
+                  metadata.Marker?.filter(
+                    (marker) =>
+                      marker.startTimeOffset / 1000 <= progress &&
+                      marker.endTimeOffset / 1000 >= progress &&
+                      marker.type === "intro",
+                  )[0].endTimeOffset / 1000;
+                player.current.seekTo(time + 1);
+              }}
+            >
+              <SkipForward /> Skip Intro
+            </Button>
           </div>
           <div
-            className={`flex flex-row p-3 sm:p-6 justify-end z-50 ${showCredit ? "" : "hidden"} transition`}
+            className={`flex flex-row p-3 sm:p-6 justify-end z-50 transition-opacity duration-300 ${showCredit ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"}`}
             autoFocus
           >
-            {showCredit && (
-              <Button
-                type="button"
-                variant="outline"
-                id="button-skipcredit"
-                autoFocus
-                onClick={() => {
-                  if (!player.current || !metadata?.Marker) return;
-                  const time =
-                    metadata.Marker?.filter(
-                      (marker) =>
-                        marker.startTimeOffset / 1000 <= progress &&
-                        marker.endTimeOffset / 1000 >= progress &&
-                        marker.type === "credits" &&
-                        !marker.final,
-                    )[0].endTimeOffset / 1000;
-                  player.current.seekTo(time + 1);
-                }}
-              >
-                <SkipForward /> Skip Credit
-              </Button>
-            )}
+            <Button
+              type="button"
+              variant="outline"
+              id="button-skipcredit"
+              autoFocus={showCredit}
+              onClick={() => {
+                if (!player.current || !metadata?.Marker) return;
+                const time =
+                  metadata.Marker?.filter(
+                    (marker) =>
+                      marker.startTimeOffset / 1000 <= progress &&
+                      marker.endTimeOffset / 1000 >= progress &&
+                      marker.type === "credits" &&
+                      !marker.final,
+                  )[0].endTimeOffset / 1000;
+                player.current.seekTo(time + 1);
+              }}
+            >
+              <SkipForward /> Skip Credit
+            </Button>
           </div>
           <div
             className={`sticky bottom-0 w-full px-2 sm:px-3 ${showControls ? "" : "translate-y-full"} transition-all duration-300`}
@@ -984,7 +1013,7 @@ export const WatchScreen: FC<{ watch: string | undefined }> = ({ watch }) => {
                     <Volume2 className="w-5 h-5 sm:w-6 sm:h-6 text-white hover:scale-105 transition duration-150" />
                   )}
                 </button>
-                <div className="overflow-visible w-0 group-hover:w-24 transition-all duration-200">
+                <div className="overflow-hidden w-0 group-hover:w-24 transition-all duration-200 pointer-events-none group-hover:pointer-events-auto">
                   <Slider
                     className="w-24 h-full opacity-0 group-hover:opacity-100 transition-opacity duration-200"
                     value={[isMuted ? 0 : volume]}
@@ -1107,6 +1136,7 @@ export const WatchScreen: FC<{ watch: string | undefined }> = ({ watch }) => {
                   align="end" 
                   className="w-[calc(100vw-1rem)] sm:w-80 max-w-80 p-0 glass-dark backdrop-blur-xl border-white/20 rounded-2xl overflow-hidden"
                   sideOffset={30}
+                  container={container.current}
                 >
                   {/* Main Menu */}
                   {settingsView === 'main' && (
@@ -1206,12 +1236,9 @@ export const WatchScreen: FC<{ watch: string | undefined }> = ({ watch }) => {
                                 localStorage.setItem("quality", option.bitrate.toString());
                               }
 
-                              const progress = player.current?.getCurrentTime() ?? 0;
-                              if (!seekToAfterLoad.current) {
-                                seekToAfterLoad.current = progress;
-                              }
-                              setUrl("");
-                              setNextUrl(loaded());
+                              const currentMs = Math.floor((player.current?.getCurrentTime() ?? 0) * 1000);
+                              seekToAfterLoad.current = currentMs / 1000;
+                              reloadPlayer(loaded(currentMs));
                               setSettingsView('main');
                             }}
                             className={`w-full px-4 py-3 flex items-center justify-between hover:bg-white/10 transition-colors ${
@@ -1258,12 +1285,9 @@ export const WatchScreen: FC<{ watch: string | undefined }> = ({ watch }) => {
                                 },
                               });
 
-                              const progress = player.current?.getCurrentTime() ?? 0;
-                              if (!seekToAfterLoad.current) {
-                                seekToAfterLoad.current = progress;
-                              }
-                              setUrl("");
-                              setNextUrl(loaded());
+                              const currentMs = Math.floor((player.current?.getCurrentTime() ?? 0) * 1000);
+                              seekToAfterLoad.current = currentMs / 1000;
+                              reloadPlayer(loaded(currentMs));
                               setSettingsView('main');
                             }}
                             className={`w-full px-4 py-3 flex items-center justify-between hover:bg-white/10 transition-colors ${
@@ -1280,7 +1304,7 @@ export const WatchScreen: FC<{ watch: string | undefined }> = ({ watch }) => {
                     </div>
                   )}
                   
-                  {/* Subtitles Submenu */}
+                  {/* Subtitles Submenu */}}}
                   {settingsView === 'subtitles' && (
                     <div className="py-2">
                       <div className="px-4 py-3 flex items-center gap-3 border-b border-white/10">
@@ -1308,12 +1332,9 @@ export const WatchScreen: FC<{ watch: string | undefined }> = ({ watch }) => {
                               },
                             });
 
-                            const progress = player.current?.getCurrentTime() ?? 0;
-                            if (!seekToAfterLoad.current) {
-                              seekToAfterLoad.current = progress;
-                            }
-                            setUrl("");
-                            setNextUrl(loaded());
+                            const currentMs = Math.floor((player.current?.getCurrentTime() ?? 0) * 1000);
+                            seekToAfterLoad.current = currentMs / 1000;
+                            reloadPlayer(loaded(currentMs));
                             setSettingsView('main');
                           }}
                           className={`w-full px-4 py-3 flex items-center justify-between hover:bg-white/10 transition-colors ${
@@ -1342,12 +1363,9 @@ export const WatchScreen: FC<{ watch: string | undefined }> = ({ watch }) => {
                                 },
                               });
 
-                              const progress = player.current?.getCurrentTime() ?? 0;
-                              if (!seekToAfterLoad.current) {
-                                seekToAfterLoad.current = progress;
-                              }
-                              setUrl("");
-                              setNextUrl(loaded());
+                              const currentMs = Math.floor((player.current?.getCurrentTime() ?? 0) * 1000);
+                              seekToAfterLoad.current = currentMs / 1000;
+                              reloadPlayer(loaded(currentMs));
                               setSettingsView('main');
                             }}
                             className={`w-full px-4 py-3 flex items-center justify-between hover:bg-white/10 transition-colors ${

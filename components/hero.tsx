@@ -2,7 +2,7 @@
 
 import { type CSSProperties, FC, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Info, Play, Star, Clock, Calendar } from "lucide-react";
+import { Info, Play, Star, Clock, Calendar, ChevronDown } from "lucide-react";
 import { ServerApi } from "@/api";
 import { useQuery } from "@tanstack/react-query";
 import { useHubItem } from "@/hooks/use-hub-item";
@@ -10,7 +10,7 @@ import { APPBAR_HEIGHT } from "@/components/appbar";
 import { useSettings } from "@/components/settings-provider";
 import { getContentLogo } from "@/lib/fanart";
 
-export const Hero: FC<{ item: Plex.Metadata }> = ({ item }) => {
+export const Hero: FC<{ item: Plex.Metadata; onReady?: () => void }> = ({ item, onReady }) => {
   const { disableClearLogo, t } = useSettings();
   const metadata = useQuery({
     queryKey: ["metadata", item.ratingKey],
@@ -30,6 +30,14 @@ export const Hero: FC<{ item: Plex.Metadata }> = ({ item }) => {
   const [summaryHeight, setSummaryHeight] = useState(0);
   const [fanartLogo, setFanartLogo] = useState<string | null>(null);
   const [isExpanded, setIsExpanded] = useState(false);
+  const [logoLoaded, setLogoLoaded] = useState(false);
+  const readyFired = useRef(false);
+
+  const fireReady = () => {
+    if (readyFired.current) return;
+    readyFired.current = true;
+    onReady?.();
+  };
 
   useEffect(() => {
     if (summaryRef.current && summaryHeight === 0) {
@@ -37,16 +45,44 @@ export const Hero: FC<{ item: Plex.Metadata }> = ({ item }) => {
     }
   }, []);
 
-  // Load fanart.tv logo when there's no Plex clear logo
+  // Safety timeout — never hang the page
   useEffect(() => {
-    if (!clearLogo && metadata.data) {
-      getContentLogo(metadata.data).then((logo) => {
-        if (logo) {
-          setFanartLogo(logo);
-        }
-      });
-    }
-  }, [clearLogo, metadata.data]);
+    const timeout = setTimeout(fireReady, 6000);
+    return () => clearTimeout(timeout);
+  }, []);
+
+  // Main preload chain — only starts once metadata is available so coverImage
+  // and clearLogo are their final values (no premature fireReady).
+  useEffect(() => {
+    // Wait for the metadata query to settle (success or error)
+    if (!metadata.data && !metadata.isError) return;
+
+    const currentData = metadata.data ?? item;
+
+    const finish = () => fireReady();
+
+    const preloadLogo = (logoUrl: string | null) => {
+      if (!logoUrl || disableClearLogo) { finish(); return; }
+      const img = new window.Image();
+      img.onload = () => { setLogoLoaded(true); finish(); };
+      img.onerror = finish;
+      img.src = logoUrl;
+    };
+
+    const cover = new window.Image();
+    cover.onload = () => {
+      if (clearLogo) {
+        preloadLogo(clearLogo);
+      } else {
+        getContentLogo(currentData).then((logo) => {
+          if (logo) setFanartLogo(logo);
+          preloadLogo(logo);
+        });
+      }
+    };
+    cover.onerror = finish;
+    cover.src = coverImage;
+  }, [metadata.data, metadata.isError]);
 
   const year = item.year;
   const rating = item.rating;
@@ -58,11 +94,13 @@ export const Hero: FC<{ item: Plex.Metadata }> = ({ item }) => {
 
   return (
     <div className="w-full flex flex-col items-start justify-start relative pb-4 md:pb-0">
-      <div className="relative w-full h-[42svh] min-h-[260px] max-h-[420px] md:h-auto md:min-h-0 md:max-h-none overflow-hidden">
+      <div className="relative w-full h-[42svh] min-h-[340px] max-h-[420px] md:h-auto md:min-h-0 md:max-h-none overflow-hidden">
         <img
           className="w-full h-full md:h-auto top-0 object-cover object-center"
           src={coverImage}
           alt={t("hero.previewImageAlt")}
+          fetchPriority="high"
+          loading="eager"
         />
         <div
           className="w-full h-full absolute top-0"
@@ -88,9 +126,11 @@ export const Hero: FC<{ item: Plex.Metadata }> = ({ item }) => {
         >
           {!disableClearLogo && displayLogo ? (
             <img
-              className="w-auto max-w-[82vw] sm:max-w-[70vw] md:max-w-[56vw] xl:max-w-[600px] max-h-[88px] sm:max-h-[130px] md:max-h-[200px] xl:max-h-[320px] h-full drop-shadow-2xl object-contain"
+              className="w-auto max-w-[82vw] sm:max-w-[70vw] md:max-w-[56vw] xl:max-w-[600px] max-h-[88px] sm:max-h-[130px] md:max-h-[200px] xl:max-h-[320px] h-full drop-shadow-2xl object-contain transition-opacity duration-500"
+              style={{ opacity: logoLoaded ? 1 : 0 }}
               src={displayLogo}
               alt={item.title}
+              onLoad={() => setLogoLoaded(true)}
             />
           ) : (
             <p
@@ -157,20 +197,9 @@ export const Hero: FC<{ item: Plex.Metadata }> = ({ item }) => {
               className="mt-2 text-xs sm:text-sm font-semibold text-white/70 hover:text-white transition-colors flex items-center gap-1"
             >
               {isExpanded ? t("hero.readLess") : t("hero.readMore")}
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className={`transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`}
-              >
-                <polyline points="6 9 12 15 18 9"></polyline>
-              </svg>
+              <ChevronDown
+                className={`w-4 h-4 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`}
+              />
             </button>
           )}
         </div>

@@ -217,13 +217,10 @@ export function SearchProvider({ children }: { children: ReactNode }) {
             </ScrollArea>
           </Command>
 
-          <DialogClose className="absolute right-4 top-3">
-            <button
-              type="button"
-              className="rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground"
-            >
-              <X className="w-4 h-4" />
-            </button>
+          <DialogClose
+            className="absolute right-4 top-3 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground"
+          >
+            <X className="w-4 h-4" />
           </DialogClose>
         </DialogContent>
       </Dialog>

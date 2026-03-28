@@ -14,10 +14,15 @@ const config: Config = {
           "0%,70%,100%": { opacity: "1" },
           "20%,50%": { opacity: "0" },
         },
+        shimmer: {
+          "0%": { backgroundPosition: "-200% 0" },
+          "100%": { backgroundPosition: "200% 0" },
+        },
       },
       animation: {
         "caret-blink": "caret-blink 1.25s ease-out infinite",
-        "spin-fast": "spin 0.75s linear infinite", // faster than default (1s)
+        "spin-fast": "spin 0.75s linear infinite",
+        shimmer: "shimmer 1.6s linear infinite",
       },
       screens: {
         "3xl": "1600px",

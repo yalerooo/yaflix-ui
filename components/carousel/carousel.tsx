@@ -321,10 +321,10 @@ const Carousel: FC<{
           size={40}
           color={"#ffffff"}
           className={cn(
-            "transition opacity-0",
+            "transition-opacity duration-200 opacity-0",
             isAtStartOfScroll
               ? ""
-              : "group-hover:opacity-100 group-hover:block",
+              : "group-hover:opacity-100",
           )}
         />
       </button>
@@ -342,8 +342,8 @@ const Carousel: FC<{
           size={40}
           color={"#ffffff"}
           className={cn(
-            "transition opacity-0",
-            isAtEndOfScroll ? "" : "group-hover:opacity-100 group-hover:block",
+            "transition-opacity duration-200 opacity-0",
+            isAtEndOfScroll ? "" : "group-hover:opacity-100",
           )}
         />
       </button>

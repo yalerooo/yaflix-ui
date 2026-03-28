@@ -7,6 +7,7 @@
     src: url('../fonts/NetflixSans-Light.otf');
     font-weight: 200;
     font-style: normal;
+    font-display: swap;
 }
 
 @font-face {
@@ -14,6 +15,7 @@
     src: url('../fonts/NetflixSans-Regular.otf');
     font-weight: normal;
     font-style: normal;
+    font-display: swap;
 }
 
 @font-face {
@@ -21,6 +23,7 @@
     src: url('../fonts/NetflixSans-Medium.otf');
     font-weight: 600;
     font-style: normal;
+    font-display: swap;
 }
 
 @font-face {
@@ -28,6 +31,7 @@
     src: url('../fonts/NetflixSans-Bold.otf');
     font-weight: bold;
     font-style: normal;
+    font-display: swap;
 }
 
 body {
@@ -78,36 +82,7 @@ body {
         --chart-3: 30 80% 55%;
         --chart-4: 280 65% 60%;
         --chart-5: 340 75% 55%;
-        --radius: 0.5rem;
-    }
-
-    .dark {
-        --plex-accent: 42 97% 46%;
-        --background: 240 10% 3.9%;
-        --alternative: 21, 21, 23;
-        --foreground: 0 0% 98%;
-        --card: 240 10% 3.9%;
-        --card-foreground: 0 0% 98%;
-        --popover: 240 10% 3.9%;
-        --popover-foreground: 0 0% 98%;
-        --primary: 0 0% 98%;
-        --primary-foreground: 240 5.9% 10%;
-        --secondary: 240 3.7% 15.9%;
-        --secondary-foreground: 0 0% 98%;
-        --muted: 240 3.7% 15.9%;
-        --muted-foreground: 240 5% 64.9%;
-        --accent: 240 3.7% 15.9%;
-        --accent-foreground: 0 0% 98%;
-        --destructive: 0 62.8% 30.6%;
-        --destructive-foreground: 0 0% 98%;
-        --border: 240 3.7% 15.9%;
-        --input: 240 3.7% 15.9%;
-        --ring: 240 4.9% 83.9%;
-        --chart-1: 220 70% 50%;
-        --chart-2: 160 60% 45%;
-        --chart-3: 30 80% 55%;
-        --chart-4: 280 65% 60%;
-        --chart-5: 340 75% 55%;
+        --radius: 0.75rem;
     }
 }
 
@@ -235,6 +210,7 @@ body {
     }
 }
 
+@layer components {
 /* Glassmorphic utilities */
 .glass {
     background: rgba(255, 255, 255, 0.06);
@@ -282,6 +258,7 @@ body {
 .glass-glow-accent {
     box-shadow: 0 4px 30px rgba(217, 164, 6, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
+}
 
 @keyframes glassShimmer {
     0% { background-position: -200% 0; }
@@ -323,21 +300,21 @@ body {
     opacity: 0;
 }
 
-/* Custom scrollbar for settings menu */
-.overflow-y-auto::-webkit-scrollbar {
+/* Custom scrollbar — scoped to .settings-scroll only */
+.settings-scroll::-webkit-scrollbar {
     width: 6px;
 }
 
-.overflow-y-auto::-webkit-scrollbar-track {
+.settings-scroll::-webkit-scrollbar-track {
     background: rgba(255, 255, 255, 0.05);
     border-radius: 10px;
 }
 
-.overflow-y-auto::-webkit-scrollbar-thumb {
+.settings-scroll::-webkit-scrollbar-thumb {
     background: rgba(255, 255, 255, 0.2);
     border-radius: 10px;
 }
 
-.overflow-y-auto::-webkit-scrollbar-thumb:hover {
+.settings-scroll::-webkit-scrollbar-thumb:hover {
     background: rgba(255, 255, 255, 0.3);
 }
